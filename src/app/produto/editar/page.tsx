@@ -3,7 +3,7 @@
 import { ArrowLeft, ClipboardPaste, Copy, ImagePlus, Info, Plus, Save, Trash2, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useRef, useState } from "react";
+import { Fragment, Suspense, useRef, useState } from "react";
 import { ICONES_PROD, NIVEL_COR, ProdutoCapa } from "@/components/produto";
 import { ListaRegras } from "@/components/regras";
 import { PageHeader, Vazio } from "@/components/ui";
@@ -27,11 +27,12 @@ const OPC = {
   situacao: ["Ativo", "Ativo com comercialização suspensa", "Cancelado"] as SituacaoANS[],
   status: ["Em elaboração", "Em comercialização", "Fora de comercialização"] as StatusComercial[],
 };
-const FATORES_PADRAO = [1, 1.2, 1.38, 1.55, 1.72, 1.95, 2.5, 3.25, 4.2, 5.9];
+const VAZIO = () => Array<number>(10).fill(0);
+const r2 = (v: number) => Math.round(v * 100) / 100;
 
 function ntPadrao(): NotaTecnica {
-  const t = FATORES_PADRAO.map((f) => Math.round(195 * f * 100) / 100);
-  return { numero: "", dataBase: "", atuario: "", t, inferior: t.map((v) => Math.round(v * 92) / 100), superior: t.map((v) => Math.round(v * 112) / 100) };
+  // nota em branco: T, margens e variações vêm da atuária
+  return { numero: "", dataBase: "", atuario: "", t: VAZIO(), inferior: VAZIO(), superior: VAZIO() };
 }
 
 const uidLocal = () => Math.random().toString(36).slice(2, 9);
@@ -42,7 +43,7 @@ function novoPerfil(nome: string, base?: PerfilVenda): PerfilVenda {
     codigos: [],
     coparticipacao: base ? base.coparticipacao.map((c) => ({ ...c, id: uidLocal() })) : [],
     limiteGlobal: base?.limiteGlobal ? { ...base.limiteGlobal } : undefined,
-    precoComercial: base ? [...base.precoComercial] : FATORES_PADRAO.map((f) => Math.round(200 * f * 100) / 100),
+    precoComercial: base ? [...base.precoComercial] : VAZIO(),
     notaTecnica: base
       ? { ...base.notaTecnica, t: [...base.notaTecnica.t], inferior: [...base.notaTecnica.inferior], superior: [...base.notaTecnica.superior] }
       : ntPadrao(),
@@ -122,6 +123,7 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
   const variacoes = variacaoFaixas(perfil.precoComercial);
   const desvios = desvioNTRP(perfil);
   const margens = situacaoMargem(perfil);
+  const ntCompleta = perfil.notaTecnica.t.every((v) => v > 0);
   const regDigitos = p.registroANS.replace(/\D/g, "");
   const erros = [
     !p.nome.trim() && "Informe o nome comercial do produto.",
@@ -486,9 +488,14 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
             </button>
             <button
               className="btn-outline"
-              onClick={() => setPerfil({ precoComercial: FATORES_PADRAO.map((f) => Math.round(perfil.precoComercial[0] * f * 100) / 100) })}
+              disabled={!ntCompleta || !perfil.precoComercial[0]}
+              title={!ntCompleta ? "Preencha o T das 10 faixas na nota técnica" : !perfil.precoComercial[0] ? "Informe o preço da 1ª faixa" : "Aplica as variações entre faixas da nota técnica sobre o preço da 1ª faixa"}
+              onClick={() => {
+                const t = perfil.notaTecnica.t;
+                setPerfil({ precoComercial: t.map((v) => r2((perfil.precoComercial[0] * v) / t[0])) });
+              }}
             >
-              <Wand2 size={16} /> Gerar faixas a partir da 1ª
+              <Wand2 size={16} /> Gerar a partir da 1ª (variações da NTRP)
             </button>
             <div className="flex items-end gap-2">
               <Campo label="Reajuste %">
@@ -719,6 +726,23 @@ function NotaTecnicaEditor({ nota, onChange, titulo }: { nota: NotaTecnica; onCh
   const [sup, setSup] = useState(12);
   const [aviso, setAviso] = useState("");
   const setCel = (col: "t" | "inferior" | "superior", i: number, v: number) => onChange({ ...nota, [col]: nota[col].map((o, j) => (j === i ? v : o)) });
+  const regrasT = nota.t.every((v) => v > 0) ? validarFaixasRN63(nota.t) : null;
+
+  /**
+   * Edita a variação da faixa i: recalcula o T dessa faixa a partir da anterior e desloca as faixas seguintes
+   * na mesma proporção (preservando as variações delas). As margens acompanham o T proporcionalmente.
+   */
+  const aplicarVariacao = (i: number, pctVar: number) => {
+    const novoTi = r2(nota.t[i - 1] * (1 + pctVar / 100));
+    const fator = nota.t[i] ? novoTi / nota.t[i] : 1;
+    const ajusta = (arr: number[], escalar: boolean) =>
+      arr.map((v, j) => (j < i ? v : j === i && !escalar ? novoTi : r2(v * fator)));
+    if (!nota.t[i]) {
+      onChange({ ...nota, t: nota.t.map((v, j) => (j === i ? novoTi : v)) });
+      return;
+    }
+    onChange({ ...nota, t: ajusta(nota.t, false), inferior: ajusta(nota.inferior, true), superior: ajusta(nota.superior, true) });
+  };
 
   /** Cola um bloco do Excel (linhas = faixas; colunas = T, margem inferior, margem superior) a partir da célula clicada. */
   const colar = (e: React.ClipboardEvent<HTMLInputElement>, linha: number, colIni: number) => {
@@ -756,6 +780,7 @@ function NotaTecnicaEditor({ nota, onChange, titulo }: { nota: NotaTecnica; onCh
           <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
             <th className="py-1">Faixa</th>
             <th className="py-1">T · preço sugerido (R$)</th>
+            <th className="py-1">Variação entre faixas (%)</th>
             <th className="py-1">Margem inferior (R$)</th>
             <th className="py-1">Margem superior (R$)</th>
           </tr>
@@ -765,21 +790,42 @@ function NotaTecnicaEditor({ nota, onChange, titulo }: { nota: NotaTecnica; onCh
             <tr key={f}>
               <td className="py-1 pr-3 font-medium">{i + 1}ª · {f}</td>
               {(["t", "inferior", "superior"] as const).map((col, c) => (
-                <td key={col} className="py-1 pr-3">
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    value={nota[col][i] || ""}
-                    onChange={(e) => setCel(col, i, Number(e.target.value))}
-                    onPaste={(e) => colar(e, i, c)}
-                  />
-                </td>
+                <Fragment key={col}>
+                  <td className="py-1 pr-3">
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="input"
+                      value={nota[col][i] || ""}
+                      onChange={(e) => setCel(col, i, Number(e.target.value))}
+                      onPaste={(e) => colar(e, i, c)}
+                    />
+                  </td>
+                  {col === "t" && (
+                    <td className="py-1 pr-3">
+                      {i === 0 ? (
+                        <span className="block px-3 text-gray-400">—</span>
+                      ) : (
+                        <CelulaVariacao
+                          valor={nota.t[i - 1] && nota.t[i] ? (nota.t[i] / nota.t[i - 1] - 1) * 100 : null}
+                          desabilitado={!nota.t[i - 1]}
+                          onCommit={(v) => aplicarVariacao(i, v)}
+                        />
+                      )}
+                    </td>
+                  )}
+                </Fragment>
               ))}
             </tr>
           ))}
         </tbody>
       </table>
+      {regrasT && (
+        <div className={`mt-3 rounded-lg px-3 py-2 text-xs ${regrasT.every((r) => r.ok) ? "bg-brand-50 text-brand-800" : "bg-red-50 text-red-700"}`}>
+          <strong>Variações da nota técnica · RN 63/2003:</strong>{" "}
+          {regrasT.map((r) => `${r.ok ? "✓" : "✗"} ${r.titulo}`).join("  ·  ")}
+        </div>
+      )}
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
         <span>Sem as margens da atuária? Calcular a partir do T:</span>
         <span>−</span><input type="number" className="input w-16 px-2 py-1 text-xs" value={inf} onChange={(e) => setInf(Number(e.target.value))} /><span>%</span>
@@ -793,6 +839,35 @@ function NotaTecnicaEditor({ nota, onChange, titulo }: { nota: NotaTecnica; onCh
         </button>
         {aviso && <span className="ml-auto font-semibold text-brand-700">{aviso}</span>}
       </div>
+    </div>
+  );
+}
+
+/** Campo de variação % com edição livre; aplica ao sair do campo ou com Enter. */
+function CelulaVariacao({ valor, desabilitado, onCommit }: { valor: number | null; desabilitado?: boolean; onCommit: (v: number) => void }) {
+  const fmt = (v: number | null) => (v === null ? "" : (Math.round(v * 100) / 100).toString());
+  const [texto, setTexto] = useState(fmt(valor));
+  const [focado, setFocado] = useState(false);
+  const exibido = focado ? texto : fmt(valor);
+  const confirmar = () => {
+    setFocado(false);
+    const n = Number(texto.replace(",", "."));
+    if (texto.trim() !== "" && !Number.isNaN(n) && fmt(valor) !== texto) onCommit(n);
+  };
+  return (
+    <div className="relative">
+      <input
+        className="input pr-7 text-right"
+        inputMode="decimal"
+        disabled={desabilitado}
+        value={exibido}
+        placeholder="—"
+        onFocus={() => { setTexto(fmt(valor)); setFocado(true); }}
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={confirmar}
+        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      />
+      <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
     </div>
   );
 }
