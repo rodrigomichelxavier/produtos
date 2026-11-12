@@ -7,6 +7,7 @@ import type {
   InfoRedeNacional,
   ItemCoparticipacao,
   Material,
+  PerfilVenda,
   Prestador,
   Produto,
   SolucaoAdicional,
@@ -34,11 +35,13 @@ const FATORES = [1, 1.2, 1.38, 1.55, 1.72, 1.95, 2.5, 3.25, 4.2, 5.9];
 const tabela = (base: number) => FATORES.map((f) => Math.round(base * f * 100) / 100);
 
 type U = [cidade: string, bairro: string, cnes: string];
+let seqLocal = 101;
+const codigoLocal = () => `UNPP${String((seqLocal += 37)).padStart(4, "0")}`;
 const pr = (id: string, nome: string, tipo: Prestador["tipo"], unidades: U[], destaque = false): Prestador => ({
   id, nome, tipo, ativo: true, destaque,
   unidades: unidades.map(([cidade, bairro, cnes], i) => {
     const [lat, lng] = espalhar(coordenadas(cidade, bairro), `${id}u${i + 1}`);
-    return { id: `${id}u${i + 1}`, cidade, uf: "SP", bairro, cnes, lat, lng };
+    return { id: `${id}u${i + 1}`, cidade, uf: "SP", bairro, cnes, codigoLocal: codigoLocal(), lat, lng };
   }),
 });
 
@@ -131,17 +134,42 @@ const TODOS = PRESTADORES.map((p) => p.id);
 const agora = new Date("2026-11-11T14:00:00-03:00").getTime();
 const diasAtras = (d: number, h = 0) => new Date(agora - d * 86400000 - h * 3600000).toISOString();
 
-type Base = Omit<Produto, "formacaoPreco" | "situacaoANS" | "atualizadoEm" | "precoComercial" | "precoNTRP"> &
-  Partial<Pick<Produto, "situacaoANS">> & { preco: number; ntrp: number; dias: number };
+type Base = Omit<Produto, "formacaoPreco" | "situacaoANS" | "atualizadoEm" | "perfis"> &
+  Partial<Pick<Produto, "situacaoANS">> & {
+    preco: number; ntrp: number; dias: number;
+    codigos: string[]; coparticipacao: ItemCoparticipacao[]; limiteGlobal?: PerfilVenda["limiteGlobal"];
+    /** segundo perfil de coparticipação (percentual maior, mensalidade menor) */
+    perfil2?: { pct: number; desconto: number; codigos: string[] };
+  };
 
-const prod = ({ preco, ntrp, dias, ...b }: Base): Produto => ({
-  formacaoPreco: "Pré-estabelecido",
-  situacaoANS: "Ativo",
-  ...b,
-  precoComercial: tabela(preco),
-  precoNTRP: tabela(ntrp),
-  atualizadoEm: diasAtras(dias),
-});
+const pctDe = (itens: ItemCoparticipacao[]) => Math.max(0, ...itens.filter((i) => i.tipo === "Percentual").map((i) => i.valor));
+
+const prod = ({ preco, ntrp, dias, codigos, coparticipacao, limiteGlobal, perfil2, ...b }: Base): Produto => {
+  const perfis: PerfilVenda[] = [{
+    id: `${b.id}pf1`,
+    nome: coparticipacao.length ? `Coparticipação ${pctDe(coparticipacao)}%` : "Sem coparticipação",
+    codigos, coparticipacao, limiteGlobal,
+    precoComercial: tabela(preco),
+    precoNTRP: tabela(ntrp),
+  }];
+  if (perfil2) {
+    const f = 1 - perfil2.desconto;
+    perfis.push({
+      id: `${b.id}pf2`,
+      nome: `Coparticipação ${perfil2.pct}%`,
+      codigos: perfil2.codigos,
+      coparticipacao: coparticipacao.map((i) => ({
+        ...i,
+        valor: i.tipo === "Percentual" ? perfil2.pct : Math.round(i.valor * 1.5),
+        limite: i.limite ? Math.round(i.limite * 1.4) : undefined,
+      })),
+      limiteGlobal: limiteGlobal && { ...limiteGlobal, valor: Math.round(limiteGlobal.valor * 1.4) },
+      precoComercial: tabela(preco * f),
+      precoNTRP: tabela(ntrp * f),
+    });
+  }
+  return { formacaoPreco: "Pré-estabelecido", situacaoANS: "Ativo", ...b, perfis, atualizadoEm: diasAtras(dias) };
+};
 
 export const PRODUTOS: Produto[] = [
   prod({
@@ -151,7 +179,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: REG_A, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 189.9, ntrp: 182.4, coparticipacao: coparPadrao(30), limiteGlobal: { valor: 600, periodo: "Mensal" },
-    rede: ["h2", "h6", "h7", "pa1", "l1", "l3", "i1", "i4", "c1", "c4", "c8"], solucoes: ["s3", "s7", "s11"], cor: "#2e7d32", icone: "broto", conceitoImagem: "Jovem casal sorrindo na varanda de casa, luz natural da manhã, fundo desfocado em verde suave. Mensagem: o primeiro plano, cuidado perto de casa.", dias: 2,
+    rede: ["h2", "h6", "h7", "pa1", "l1", "l3", "i1", "i4", "c1", "c4", "c8"], solucoes: ["s3", "s7", "s11"], cor: "#2e7d32", icone: "broto", conceitoImagem: "Jovem casal sorrindo na varanda de casa, luz natural da manhã, fundo desfocado em verde suave. Mensagem: o primeiro plano, cuidado perto de casa.", perfil2: { pct: 50, desconto: 0.12, codigos: ["ESEN05", "ESEN06", "ESEN07", "ESEN08"] }, dias: 2,
   }),
   prod({
     id: "p2", registroANS: "498765022", nome: "Aurora Essencial Apartamento",
@@ -197,7 +225,7 @@ export const PRODUTOS: Produto[] = [
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 152.3, ntrp: 150.0, coparticipacao: coparPadrao(25), limiteGlobal: { valor: 5000, periodo: "Anual" },
     rede: ["h2", "h3", "h6", "h7", "h8", "pa1", "pa3", "l1", "l2", "l3", "l4", "l5", "l6", "i1", "i2", "i4", "c1", "c2", "c4", "c5", "c6", "c7"],
-    solucoes: ["s2", "s3", "s7", "s15"], cor: "#0f5e6e", icone: "maleta", conceitoImagem: "Equipe pequena reunida em mesa de coworking, ambiente descontraído e luz natural, tons azul-petróleo. Mensagem: benefício acessível para PMEs.", dias: 4,
+    solucoes: ["s2", "s3", "s7", "s15"], cor: "#0f5e6e", icone: "maleta", conceitoImagem: "Equipe pequena reunida em mesa de coworking, ambiente descontraído e luz natural, tons azul-petróleo. Mensagem: benefício acessível para PMEs.", perfil2: { pct: 50, desconto: 0.12, codigos: ["EMSM07", "EMSM08", "EMSM09", "EMSM10"] }, dias: 4,
   }),
   prod({
     id: "p7", registroANS: "498765077", nome: "Aurora Empresarial Top",
@@ -252,7 +280,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Coletivo Empresarial", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Nacional", redeNacional: "Básica",
     areaAtuacao: NACIONAL, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 209.0, ntrp: 203.0, coparticipacao: coparPadrao(25), limiteGlobal: { valor: 6000, periodo: "Anual" },
-    rede: ["h2", "h6", "h7", "h8", "pa1", "l1", "l3", "l4", "i1", "i4", "c1", "c4"], solucoes: ["s1", "s3", "s7", "s12"], cor: "#1d4e89", icone: "mapa", conceitoImagem: "Mapa do Brasil em linhas finas com pontos de luz conectados, fundo azul profundo. Mensagem: proteção nacional para a sua empresa.", dias: 8,
+    rede: ["h2", "h6", "h7", "h8", "pa1", "l1", "l3", "l4", "i1", "i4", "c1", "c4"], solucoes: ["s1", "s3", "s7", "s12"], cor: "#1d4e89", icone: "mapa", conceitoImagem: "Mapa do Brasil em linhas finas com pontos de luz conectados, fundo azul profundo. Mensagem: proteção nacional para a sua empresa.", perfil2: { pct: 50, desconto: 0.12, codigos: ["NABA07", "NABA08", "NABA09", "NABA10"] }, dias: 8,
   }),
   prod({
     id: "p13", registroANS: "498765133", nome: "Aurora Clássico 2019",

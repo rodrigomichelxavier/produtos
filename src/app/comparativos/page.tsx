@@ -7,9 +7,9 @@ import { Suspense, useState } from "react";
 import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { NIVEL_COR, ProdutoCapa } from "@/components/produto";
 import { PageHeader, Vazio } from "@/components/ui";
-import { brl, formatarRegistro, pct } from "@/lib/ans";
+import { brl, formatarRegistro, pct, resumoCoparticipacao } from "@/lib/ans";
 import { locaisPrestador, useStore } from "@/lib/store";
-import { FAIXAS_ETARIAS, type Prestador, type Produto, type TipoPrestador } from "@/lib/types";
+import { FAIXAS_ETARIAS, type PerfilVenda, type Prestador, type Produto, type TipoPrestador } from "@/lib/types";
 
 const COR_A = "#2e8b34";
 const COR_B = "#0284c7";
@@ -33,17 +33,27 @@ function Comparativos() {
   const [soDif, setSoDif] = useState(true);
   const a = produtos.find((p) => p.id === aId);
   const b = produtos.find((p) => p.id === bId);
+  const [perfilA, setPerfilA] = useState("");
+  const [perfilB, setPerfilB] = useState("");
+  const pa = a?.perfis.find((x) => x.id === perfilA) ?? a?.perfis[0];
+  const pb = b?.perfis.find((x) => x.id === perfilB) ?? b?.perfis[0];
 
   return (
     <>
       <PageHeader titulo="Comparativos" subtitulo="Selecione dois produtos para ver, lado a lado, tudo o que é diferente entre eles" />
 
       <div className="card mb-6 grid items-center gap-4 p-4 md:grid-cols-[1fr_auto_1fr]">
-        <Seletor cor={COR_A} rotulo="Produto A" valor={aId} onChange={setA} produtos={produtos} />
-        <button className="btn-outline mx-auto" onClick={() => { setA(bId); setB(aId); }} title="Inverter">
+        <div>
+          <Seletor cor={COR_A} rotulo="Produto A" valor={aId} onChange={(v) => { setA(v); setPerfilA(""); }} produtos={produtos} />
+          {a && a.perfis.length > 1 && <SeletorPerfil produto={a} valor={pa!.id} onChange={setPerfilA} cor={COR_A} />}
+        </div>
+        <button className="btn-outline mx-auto" onClick={() => { setA(bId); setB(aId); setPerfilA(perfilB); setPerfilB(perfilA); }} title="Inverter">
           <ArrowLeftRight size={18} />
         </button>
-        <Seletor cor={COR_B} rotulo="Produto B" valor={bId} onChange={setB} produtos={produtos} />
+        <div>
+          <Seletor cor={COR_B} rotulo="Produto B" valor={bId} onChange={(v) => { setB(v); setPerfilB(""); }} produtos={produtos} />
+          {b && b.perfis.length > 1 && <SeletorPerfil produto={b} valor={pb!.id} onChange={setPerfilB} cor={COR_B} />}
+        </div>
       </div>
 
       {!a || !b ? (
@@ -51,7 +61,7 @@ function Comparativos() {
       ) : a.id === b.id ? (
         <Vazio texto="Selecione produtos diferentes para comparar." />
       ) : (
-        <Resultado a={a} b={b} soDif={soDif} setSoDif={setSoDif} />
+        <Resultado a={a} b={b} pa={pa!} pb={pb!} soDif={soDif} setSoDif={setSoDif} />
       )}
     </>
   );
@@ -74,10 +84,12 @@ function Seletor({ cor, rotulo, valor, onChange, produtos }: {
   );
 }
 
-function Resultado({ a, b, soDif, setSoDif }: { a: Produto; b: Produto; soDif: boolean; setSoDif: (v: boolean) => void }) {
+function Resultado({ a, b, pa, pb, soDif, setSoDif }: {
+  a: Produto; b: Produto; pa: PerfilVenda; pb: PerfilVenda; soDif: boolean; setSoDif: (v: boolean) => void;
+}) {
   const solucoes = useStore((s) => s.solucoes);
   const nomesSol = (p: Produto) => solucoes.filter((s) => p.solucoes.includes(s.id)).map((s) => s.nome).join(", ") || "Nenhuma";
-  const lg = (p: Produto) => (p.limiteGlobal ? `${brl(p.limiteGlobal.valor)} (${p.limiteGlobal.periodo.toLowerCase()})` : "—");
+  const lg = (p: PerfilVenda) => (p.limiteGlobal ? `${brl(p.limiteGlobal.valor)} (${p.limiteGlobal.periodo.toLowerCase()})` : "—");
   const linhas: [string, string, string][] = [
     ["Registro ANS", formatarRegistro(a.registroANS), formatarRegistro(b.registroANS)],
     ["Linha", a.linha, b.linha],
@@ -88,18 +100,20 @@ function Resultado({ a, b, soDif, setSoDif }: { a: Produto; b: Produto; soDif: b
     ["Área de atuação", a.areaAtuacao.join(", "), b.areaAtuacao.join(", ")],
     ["Acomodação", a.acomodacao, b.acomodacao],
     ["Fator moderador", a.fatorModerador, b.fatorModerador],
+    ["Perfil de coparticipação", pa.nome, pb.nome],
+    ["Resumo da coparticipação", resumoCoparticipacao(pa, 6), resumoCoparticipacao(pb, 6)],
     ["Formação de preço", a.formacaoPreco, b.formacaoPreco],
     ["Situação ANS", a.situacaoANS, b.situacaoANS],
     ["Status comercial", a.statusComercial, b.statusComercial],
-    ["Preço 1ª faixa", brl(a.precoComercial[0]), brl(b.precoComercial[0])],
-    ["Preço 10ª faixa", brl(a.precoComercial[9]), brl(b.precoComercial[9])],
+    ["Preço 1ª faixa", brl(pa.precoComercial[0]), brl(pb.precoComercial[0])],
+    ["Preço 10ª faixa", brl(pa.precoComercial[9]), brl(pb.precoComercial[9])],
     ["Rede direta", `${a.rede.length} prestadores`, `${b.rede.length} prestadores`],
-    ["Limite global de coparticipação", lg(a), lg(b)],
+    ["Limite global de coparticipação", lg(pa), lg(pb)],
     ["Soluções adicionais", nomesSol(a), nomesSol(b)],
   ];
   const difs = linhas.filter(([, x, y]) => x !== y);
   const visiveis = soDif ? difs : linhas;
-  const precos = FAIXAS_ETARIAS.map((f, i) => ({ faixa: f.replace(" anos", "").replace(" ou mais", "+"), A: a.precoComercial[i], B: b.precoComercial[i] }));
+  const precos = FAIXAS_ETARIAS.map((f, i) => ({ faixa: f.replace(" anos", "").replace(" ou mais", "+"), A: pa.precoComercial[i], B: pb.precoComercial[i] }));
 
   return (
     <div className="space-y-6">
@@ -157,12 +171,12 @@ function Resultado({ a, b, soDif, setSoDif }: { a: Produto; b: Produto; soDif: b
             </thead>
             <tbody>
               {FAIXAS_ETARIAS.map((f, i) => {
-                const d = b.precoComercial[i] / a.precoComercial[i] - 1;
+                const d = pb.precoComercial[i] / pa.precoComercial[i] - 1;
                 return (
                   <tr key={f} className="border-b border-gray-100">
                     <td className="py-1">{f}</td>
-                    <td className="py-1 text-right">{brl(a.precoComercial[i])}</td>
-                    <td className="py-1 text-right">{brl(b.precoComercial[i])}</td>
+                    <td className="py-1 text-right">{brl(pa.precoComercial[i])}</td>
+                    <td className="py-1 text-right">{brl(pb.precoComercial[i])}</td>
                     <td className={clsx("py-1 text-right font-semibold", d > 0 ? "text-red-600" : d < 0 ? "text-brand-700" : "text-gray-400")}>
                       {d > 0 ? "+" : ""}{pct(d)}
                     </td>
@@ -311,6 +325,24 @@ function ComparaSolucoes({ a, b }: { a: Produto; b: Produto }) {
           </tbody>
         </table>
       )}
+    </div>
+  );
+}
+
+function SeletorPerfil({ produto, valor, onChange, cor }: { produto: Produto; valor: string; onChange: (v: string) => void; cor: string }) {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-[92px]">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Perfil</span>
+      {produto.perfis.map((x) => (
+        <button
+          key={x.id}
+          onClick={() => onChange(x.id)}
+          className="rounded-full border px-2.5 py-0.5 text-xs font-semibold transition"
+          style={x.id === valor ? { background: cor, borderColor: cor, color: "#fff" } : { borderColor: "var(--color-gray-300)", color: "var(--color-gray-600)" }}
+        >
+          {x.nome}
+        </button>
+      ))}
     </div>
   );
 }

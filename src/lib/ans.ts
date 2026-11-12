@@ -1,4 +1,4 @@
-import type { Produto } from "./types";
+import type { PerfilVenda, Produto } from "./types";
 
 export interface Regra {
   ok: boolean;
@@ -59,11 +59,29 @@ export function validarFaixasRN63(precos: number[]): Regra[] {
 }
 
 /** Desvio do preço comercial em relação à NTRP, por faixa. */
-export function desvioNTRP(produto: Pick<Produto, "precoComercial" | "precoNTRP">): number[] {
-  return produto.precoComercial.map((v, i) => {
-    const base = produto.precoNTRP[i];
+export function desvioNTRP(perfil: Pick<PerfilVenda, "precoComercial" | "precoNTRP">): number[] {
+  return perfil.precoComercial.map((v, i) => {
+    const base = perfil.precoNTRP[i];
     return base ? v / base - 1 : 0;
   });
+}
+
+/** Menor preço da 1ª faixa entre os perfis ("a partir de"). */
+export const precoBase = (p: Pick<Produto, "perfis">) => Math.min(...p.perfis.map((x) => x.precoComercial[0]));
+/** Perfil de menor preço (usado como referência em cards e gráficos). */
+export const perfilReferencia = (p: Pick<Produto, "perfis">) =>
+  p.perfis.reduce((a, b) => (b.precoComercial[0] < a.precoComercial[0] ? b : a), p.perfis[0]);
+/** Todos os códigos de sistema do produto (somando os perfis). */
+export const codigosDoProduto = (p: Pick<Produto, "perfis">) => p.perfis.flatMap((x) => x.codigos);
+
+/** Resumo curto de um perfil de coparticipação: "Consultas eletivas R$ 30 · Exames simples 30% · Limite global R$ 600/mês". */
+export function resumoCoparticipacao(perfil: PerfilVenda, max = 4): string {
+  if (!perfil.coparticipacao.length) return "Sem coparticipação";
+  const f = (v: number) => BRL.format(v).replace(",00", "");
+  const itens = perfil.coparticipacao.slice(0, max).map((i) => `${i.procedimento} ${i.tipo === "Percentual" ? `${i.valor}%` : f(i.valor)}`);
+  if (perfil.coparticipacao.length > max) itens.push(`+${perfil.coparticipacao.length - max}`);
+  if (perfil.limiteGlobal) itens.push(`Limite global ${f(perfil.limiteGlobal.valor)}/${perfil.limiteGlobal.periodo === "Mensal" ? "mês" : "ano"}`);
+  return itens.join(" · ");
 }
 
 export function tipoPessoa(c: Produto["contratacao"]): "PF" | "PJ" {

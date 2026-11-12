@@ -141,6 +141,7 @@ export default function MapaRede({ pontos, produtos, escuro }: { pontos: Ponto[]
               <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: meta.cor }}>{p.tipo}</div>
               <div className="text-sm font-bold text-gray-900">{p.nome}</div>
               <div className="text-xs text-gray-500">{u.bairro} · {u.cidade}/{u.uf}{u.cnes ? ` · CNES ${u.cnes}` : ""}</div>
+              <div className="mt-0.5 font-mono text-[11px] font-semibold text-gray-600">Código local {u.codigoLocal}</div>
               {p.unidades.length > 1 && <div className="mt-1 text-xs text-gray-500">{p.unidades.length} unidades na região</div>}
               <div className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Na rede de {noPortfolio.length} produto(s)</div>
               <div className="mt-1 flex max-w-[240px] flex-wrap gap-1">

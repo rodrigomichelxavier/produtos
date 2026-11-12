@@ -50,7 +50,7 @@ function Prestadores() {
         .filter((p) => cidade === "Todas" || p.unidades.some((u) => u.cidade === cidade))
         .filter((p) => {
           const q = busca.trim().toLowerCase();
-          return !q || `${p.nome} ${p.unidades.map((u) => `${u.bairro} ${u.cnes ?? ""}`).join(" ")}`.toLowerCase().includes(q);
+          return !q || `${p.nome} ${p.unidades.map((u) => `${u.bairro} ${u.cnes ?? ""} ${u.codigoLocal}`).join(" ")}`.toLowerCase().includes(q);
         })
         .sort((a, b) => a.tipo.localeCompare(b.tipo) || a.nome.localeCompare(b.nome)),
     [prestadores, tipo, cidade, busca],
@@ -65,7 +65,7 @@ function Prestadores() {
           <span className="filtro-label">Buscar</span>
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input pl-9" placeholder="Nome, bairro ou CNES" value={busca} onChange={(e) => setBusca(e.target.value)} />
+            <input className="input pl-9" placeholder="Nome, bairro, CNES ou código local" value={busca} onChange={(e) => setBusca(e.target.value)} />
           </div>
         </div>
         <div>
@@ -100,7 +100,7 @@ function Prestadores() {
               <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
                 <th className="py-2 pr-3">Prestador</th>
                 <th className="py-2 pr-3">Tipo</th>
-                <th className="py-2 pr-3">Unidades (bairro · cidade/UF · CNES)</th>
+                <th className="py-2 pr-3">Unidades (código local · bairro · cidade/UF · CNES)</th>
                 <th className="py-2 pr-3 text-center">Produtos</th>
                 <th className="py-2" />
               </tr>
@@ -117,6 +117,7 @@ function Prestadores() {
                     <ul className="space-y-0.5">
                       {p.unidades.map((u) => (
                         <li key={u.id}>
+                          <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-px font-mono text-[11px] font-semibold text-gray-700">{u.codigoLocal}</span>
                           {u.bairro} · {u.cidade}/{u.uf} <span className="text-xs text-gray-400">{u.cnes ? `CNES ${u.cnes}` : ""}</span>
                         </li>
                       ))}
@@ -153,12 +154,14 @@ function Prestadores() {
 function novaUnidade(cidade = "Campinas"): Unidade {
   const id = `un${Math.random().toString(36).slice(2, 8)}`;
   const [lat, lng] = espalhar(coordenadas(cidade, ""), id);
-  return { id, bairro: "", cidade, uf: "SP", cnes: "", lat, lng };
+  return { id, bairro: "", cidade, uf: "SP", cnes: "", codigoLocal: "", lat, lng };
 }
 
 function FormPrestador({ prestador, onClose }: { prestador: Prestador; onClose: () => void }) {
   const salvar = useStore((s) => s.salvarPrestador);
+  const todos = useStore((s) => s.prestadores);
   const [p, setP] = useState(prestador);
+  const codigosLocaisEmUso = new Set(todos.filter((x) => x.id !== prestador.id).flatMap((x) => x.unidades.map((u) => u.codigoLocal)));
   const setU = (i: number, patch: Partial<Unidade>) =>
     setP((x) => ({
       ...x,
@@ -172,7 +175,9 @@ function FormPrestador({ prestador, onClose }: { prestador: Prestador; onClose: 
     }));
   const valido =
     p.nome.trim() && p.unidades.length > 0 &&
-    p.unidades.every((u) => u.cidade.trim() && u.bairro.trim() && /^[A-Z]{2}$/.test(u.uf) && (!u.cnes || /^\d{7}$/.test(u.cnes)));
+    new Set(p.unidades.map((u) => u.codigoLocal)).size === p.unidades.length &&
+    p.unidades.every((u) => !codigosLocaisEmUso.has(u.codigoLocal)) &&
+    p.unidades.every((u) => u.codigoLocal.trim() && u.cidade.trim() && u.bairro.trim() && /^[A-Z]{2}$/.test(u.uf) && (!u.cnes || /^\d{7}$/.test(u.cnes)));
   return (
     <Modal aberto onClose={onClose} titulo={prestador.id ? "Editar prestador" : "Novo prestador"} largura="max-w-2xl">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -196,8 +201,9 @@ function FormPrestador({ prestador, onClose }: { prestador: Prestador; onClose: 
         <div className="space-y-2">
           {p.unidades.map((u, i) => (
             <div key={u.id} className="grid grid-cols-12 items-end gap-2 rounded-lg border border-gray-200 p-2">
-              <div className="col-span-12 sm:col-span-4"><span className="filtro-label">Bairro</span><input className="input" value={u.bairro} onChange={(e) => setU(i, { bairro: e.target.value })} /></div>
-              <div className="col-span-6 sm:col-span-4"><span className="filtro-label">Cidade</span><input className="input" list="cidades" value={u.cidade} onChange={(e) => setU(i, { cidade: e.target.value })} /></div>
+              <div className="col-span-6 sm:col-span-2"><span className="filtro-label">Código local</span><input className="input px-2 font-mono uppercase" maxLength={12} placeholder="UNPP0000" value={u.codigoLocal} onChange={(e) => setU(i, { codigoLocal: e.target.value.toUpperCase().replace(/\s/g, "") })} /></div>
+              <div className="col-span-6 sm:col-span-3"><span className="filtro-label">Bairro</span><input className="input" value={u.bairro} onChange={(e) => setU(i, { bairro: e.target.value })} /></div>
+              <div className="col-span-6 sm:col-span-3"><span className="filtro-label">Cidade</span><input className="input" list="cidades" value={u.cidade} onChange={(e) => setU(i, { cidade: e.target.value })} /></div>
               <div className="col-span-2 sm:col-span-1"><span className="filtro-label">UF</span><input className="input px-2" maxLength={2} value={u.uf} onChange={(e) => setU(i, { uf: e.target.value.toUpperCase() })} /></div>
               <div className="col-span-3 sm:col-span-2"><span className="filtro-label">CNES</span><input className="input px-2" maxLength={7} value={u.cnes ?? ""} onChange={(e) => setU(i, { cnes: e.target.value.replace(/\D/g, "") })} /></div>
               <button
@@ -212,7 +218,10 @@ function FormPrestador({ prestador, onClose }: { prestador: Prestador; onClose: 
             </div>
           ))}
         </div>
-        <p className="mt-1 text-[11px] text-gray-400">A posição no Mapa de Rede é estimada pelo bairro e cidade.</p>
+        <p className="mt-1 text-[11px] text-gray-400">Código local obrigatório e único (ex.: UNPP0254). A posição no Mapa de Rede é estimada pelo bairro e cidade.</p>
+        {p.unidades.some((u) => codigosLocaisEmUso.has(u.codigoLocal)) && (
+          <p className="mt-1 text-xs text-red-600">Código local já usado em outro prestador: {p.unidades.filter((u) => codigosLocaisEmUso.has(u.codigoLocal)).map((u) => u.codigoLocal).join(", ")}</p>
+        )}
       </div>
 
       <div className="mt-4 flex flex-wrap gap-6">

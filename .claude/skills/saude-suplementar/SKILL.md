@@ -23,6 +23,10 @@ Os dados do protótipo são **fictícios**; nunca use nomes reais de operadoras,
   ter um **limite global** (mensal ou anual) somando todas as classificações.
 - Soluções adicionais (ex.: Cobertura Aeromédica, TotalPass, Clube de Desconto, Seguro Viagem, Cobertura Pet) são
   cadastradas à parte; cada produto define quais permite.
+- Perfis de venda: um produto pode ser vendido com mais de um perfil de coparticipação (ex.: 30% e 50%);
+  cada perfil tem itens, limite global, tabela de preços (10 faixas + NTRP) e códigos de sistema próprios
+  (4 letras + 2 números, 4 a 10 por perfil, sem repetição no portfólio).
+- Prestadores: cada unidade tem bairro, cidade/UF, CNES e **código local** (dados fictícios: UNPP + 4 números).
 - Materiais: apenas "Uso interno" e "Uso externo"; o tipo (lâmina, tabela etc.) fica no título dado pelo analista.
 
 ## Conceitos do produto (plano de saúde)

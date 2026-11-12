@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader } from "@/components/ui";
 import { FeedItem } from "@/components/feed";
-import { brl, tipoPessoa } from "@/lib/ans";
+import { brl, precoBase, tipoPessoa } from "@/lib/ans";
 import { useStore, useUsuarioAtual } from "@/lib/store";
 
 const CORES = ["#1d5a23", "#4fa555", "#a5d6a7", "#7fc083", "#2e8b34", "#d7ecd8"];
@@ -24,7 +24,7 @@ export default function HomePage() {
   const ativos = produtos.filter((p) => p.statusComercial === "Em comercialização");
   const pf = produtos.filter((p) => tipoPessoa(p.contratacao) === "PF").length;
   const nacionais = produtos.filter((p) => p.abrangencia === "Nacional").length;
-  const ticket = ativos.length ? ativos.reduce((s, p) => s + p.precoComercial[0], 0) / ativos.length : 0;
+  const ticket = ativos.length ? ativos.reduce((s, p) => s + precoBase(p), 0) / ativos.length : 0;
 
   const kpis = [
     { label: "Produtos cadastrados", valor: produtos.length, icon: Package, sub: `${ativos.length} em comercialização` },

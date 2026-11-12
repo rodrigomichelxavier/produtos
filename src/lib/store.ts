@@ -7,7 +7,7 @@ import {
 } from "@/data/seed";
 import { brl } from "./ans";
 import type {
-  Alteracao, Configuracoes, InfoRedeNacional, ItemCoparticipacao, Material, Perfil, Prestador, Produto,
+  Alteracao, Configuracoes, InfoRedeNacional, ItemCoparticipacao, Material, Perfil, PerfilVenda, Prestador, Produto,
   SolucaoAdicional, TipoAlteracao, Usuario,
 } from "./types";
 
@@ -66,13 +66,48 @@ type Evento = { tipo: TipoAlteracao; titulo: string; detalhes: string[] };
 function diffProduto(antes: Produto, depois: Produto, prestadores: Prestador[], solucoes: SolucaoAdicional[]): Evento[] {
   const out: Evento[] = [];
 
+  // Perfis de venda (coparticipação + preço + códigos) — comparados pelo id do perfil
+  const multi = antes.perfis.length > 1 || depois.perfis.length > 1;
+  const rot = (pf: PerfilVenda) => (multi ? ` [${pf.nome}]` : "");
   const precoDet: string[] = [];
-  depois.precoComercial.forEach((v, i) => {
-    if (v !== antes.precoComercial[i]) precoDet.push(`Faixa ${i + 1}: ${brl(antes.precoComercial[i])} → ${brl(v)}`);
+  const copDet: string[] = [];
+  const codDet: string[] = [];
+  const fmt = (x: ItemCoparticipacao) => (x.tipo === "Percentual" ? `${x.valor}%` : brl(x.valor));
+  const lg = (l?: PerfilVenda["limiteGlobal"]) => (l ? `${brl(l.valor)} (${l.periodo.toLowerCase()})` : "sem limite");
+
+  depois.perfis.forEach((d) => {
+    const a = antes.perfis.find((x) => x.id === d.id);
+    if (!a) {
+      copDet.push(`Novo perfil de coparticipação: ${d.nome} (1ª faixa ${brl(d.precoComercial[0])})`);
+      if (d.codigos.length) codDet.push(`Códigos do perfil ${d.nome}: ${d.codigos.join(", ")}`);
+      return;
+    }
+    if (a.nome !== d.nome) copDet.push(`Perfil renomeado: ${a.nome} → ${d.nome}`);
+    d.precoComercial.forEach((v, i) => {
+      if (v !== a.precoComercial[i]) precoDet.push(`Faixa ${i + 1}${rot(d)}: ${brl(a.precoComercial[i])} → ${brl(v)}`);
+    });
+    d.precoNTRP.forEach((v, i) => {
+      if (v !== a.precoNTRP[i]) precoDet.push(`NTRP faixa ${i + 1}${rot(d)}: ${brl(a.precoNTRP[i])} → ${brl(v)}`);
+    });
+    d.coparticipacao.forEach((c) => {
+      const old = a.coparticipacao.find((o) => o.procedimento === c.procedimento);
+      if (!old) copDet.push(`Incluído${rot(d)}: ${c.procedimento} (${fmt(c)})`);
+      else if (old.valor !== c.valor || old.tipo !== c.tipo) copDet.push(`${c.procedimento}${rot(d)}: ${fmt(old)} → ${fmt(c)}`);
+      else if (old.limite !== c.limite) copDet.push(`Limite ${c.procedimento}${rot(d)}: ${brl(old.limite ?? 0)} → ${brl(c.limite ?? 0)}`);
+    });
+    a.coparticipacao
+      .filter((o) => !d.coparticipacao.some((c) => c.procedimento === o.procedimento))
+      .forEach((o) => copDet.push(`Excluído${rot(d)}: ${o.procedimento}`));
+    if (JSON.stringify(a.limiteGlobal) !== JSON.stringify(d.limiteGlobal))
+      copDet.push(`Limite global${rot(d)}: ${lg(a.limiteGlobal)} → ${lg(d.limiteGlobal)}`);
+    const inc = d.codigos.filter((c) => !a.codigos.includes(c));
+    const exc = a.codigos.filter((c) => !d.codigos.includes(c));
+    if (inc.length) codDet.push(`Códigos incluídos${rot(d)}: ${inc.join(", ")}`);
+    if (exc.length) codDet.push(`Códigos removidos${rot(d)}: ${exc.join(", ")}`);
   });
-  depois.precoNTRP.forEach((v, i) => {
-    if (v !== antes.precoNTRP[i]) precoDet.push(`NTRP faixa ${i + 1}: ${brl(antes.precoNTRP[i])} → ${brl(v)}`);
-  });
+  antes.perfis.filter((a) => !depois.perfis.some((d) => d.id === a.id)).forEach((a) => copDet.push(`Perfil removido: ${a.nome}`));
+  if (antes.fatorModerador !== depois.fatorModerador) copDet.unshift(`Fator moderador: ${antes.fatorModerador} → ${depois.fatorModerador}`);
+
   if (precoDet.length) out.push({ tipo: "Preço", titulo: "Alteração de preço", detalhes: precoDet });
 
   const nome = (id: string) => nomePrestador(prestadores.find((x) => x.id === id));
@@ -89,22 +124,6 @@ function diffProduto(antes: Produto, depois: Produto, prestadores: Prestador[], 
   if (antes.situacaoANS !== depois.situacaoANS) statusDet.push(`Situação ANS: ${antes.situacaoANS} → ${depois.situacaoANS}`);
   if (statusDet.length) out.push({ tipo: "Status", titulo: "Mudança de status", detalhes: statusDet });
 
-  const fmt = (x: ItemCoparticipacao) => (x.tipo === "Percentual" ? `${x.valor}%` : brl(x.valor));
-  const copDet: string[] = [];
-  if (antes.fatorModerador !== depois.fatorModerador) copDet.push(`Fator moderador: ${antes.fatorModerador} → ${depois.fatorModerador}`);
-  depois.coparticipacao.forEach((c) => {
-    const old = antes.coparticipacao.find((o) => o.procedimento === c.procedimento);
-    if (!old) copDet.push(`Incluído: ${c.procedimento} (${fmt(c)})`);
-    else if (old.valor !== c.valor || old.tipo !== c.tipo) copDet.push(`${c.procedimento}: ${fmt(old)} → ${fmt(c)}`);
-    else if (old.limite !== c.limite) copDet.push(`Limite ${c.procedimento}: ${brl(old.limite ?? 0)} → ${brl(c.limite ?? 0)}`);
-  });
-  antes.coparticipacao
-    .filter((o) => !depois.coparticipacao.some((c) => c.procedimento === o.procedimento))
-    .forEach((o) => copDet.push(`Excluído: ${o.procedimento}`));
-  if (JSON.stringify(antes.limiteGlobal) !== JSON.stringify(depois.limiteGlobal)) {
-    const lg = (l?: Produto["limiteGlobal"]) => (l ? `${brl(l.valor)} (${l.periodo.toLowerCase()})` : "sem limite");
-    copDet.push(`Limite global: ${lg(antes.limiteGlobal)} → ${lg(depois.limiteGlobal)}`);
-  }
   if (copDet.length) out.push({ tipo: "Coparticipação", titulo: "Alteração no perfil de coparticipação", detalhes: copDet });
 
   const nomeSol = (id: string) => solucoes.find((s) => s.id === id)?.nome ?? id;
@@ -129,10 +148,7 @@ function diffProduto(antes: Produto, depois: Produto, prestadores: Prestador[], 
     .filter(([k]) => JSON.stringify(antes[k]) !== JSON.stringify(depois[k]))
     .map(([k, label]) => (k === "descricao" ? `${label} atualizada` : `${label}: ${String(antes[k])} → ${String(depois[k])}`));
   if (JSON.stringify(antes.areaAtuacao) !== JSON.stringify(depois.areaAtuacao)) cad.push("Área de atuação atualizada");
-  const codInc = depois.codigos.filter((c) => !antes.codigos.includes(c));
-  const codExc = antes.codigos.filter((c) => !depois.codigos.includes(c));
-  if (codInc.length) cad.push(`Códigos incluídos: ${codInc.join(", ")}`);
-  if (codExc.length) cad.push(`Códigos removidos: ${codExc.join(", ")}`);
+  cad.push(...codDet);
   if (cad.length) out.push({ tipo: "Cadastro", titulo: "Atualização cadastral", detalhes: cad });
 
   return out;
@@ -300,7 +316,7 @@ export const useStore = create<State>()(
     {
       name: "portal-produtos-demo",
       storage: createJSONStorage(() => armazenamentoSeguro),
-      version: 8,
+      version: 9,
       // Dados de versões anteriores do protótipo são descartados.
       // Dados fictícios são renovados, mas usuários (fotos, nomes, perfis) e a configuração são preservados.
       migrate: (antigo) => {

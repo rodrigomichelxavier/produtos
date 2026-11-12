@@ -41,7 +41,7 @@ export default function MapaPage() {
     if (cidade && u.cidade !== cidade) return false;
     if (soDestaques && !p.destaque) return false;
     const q = busca.trim().toLowerCase();
-    return !q || `${p.nome} ${u.bairro}`.toLowerCase().includes(q);
+    return !q || `${p.nome} ${u.bairro} ${u.codigoLocal}`.toLowerCase().includes(q);
   });
   const contagem = (t: TipoPrestador) => pontosBase.filter((x) => x.p.tipo === t && (!cidade || x.u.cidade === cidade)).length;
   const alternarTipo = (t: TipoPrestador) =>

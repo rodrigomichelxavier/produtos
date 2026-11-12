@@ -8,11 +8,11 @@ import { ICONES_PROD, NIVEL_COR, ProdutoCapa } from "@/components/produto";
 import { ListaRegras } from "@/components/regras";
 import { PageHeader, Vazio } from "@/components/ui";
 import { MUNICIPIOS_REGIAO } from "@/data/seed";
-import { brl, validarFaixasRN63 } from "@/lib/ans";
+import { brl, codigosDoProduto, validarFaixasRN63 } from "@/lib/ans";
 import { locaisPrestador, usePermissoes, useStore } from "@/lib/store";
 import {
   FAIXAS_ETARIAS, ICONES_PRODUTO, LINHAS, MAX_CODIGOS, MIN_CODIGOS, REGEX_CODIGO, TIPOS_PRESTADOR, type Linha, type Abrangencia, type Acomodacao, type FatorModerador, type FormacaoPreco,
-  type ItemCoparticipacao, type Produto, type RedeNacional, type Segmentacao, type SituacaoANS, type StatusComercial,
+  type ItemCoparticipacao, type PerfilVenda, type Produto, type RedeNacional, type Segmentacao, type SituacaoANS, type StatusComercial,
   type TipoContratacao,
 } from "@/lib/types";
 
@@ -29,13 +29,25 @@ const OPC = {
 };
 const FATORES_PADRAO = [1, 1.2, 1.38, 1.55, 1.72, 1.95, 2.5, 3.25, 4.2, 5.9];
 
+const uidLocal = () => Math.random().toString(36).slice(2, 9);
+function novoPerfil(nome: string, base?: PerfilVenda): PerfilVenda {
+  return {
+    id: `pf${uidLocal()}`,
+    nome,
+    codigos: [],
+    coparticipacao: base ? base.coparticipacao.map((c) => ({ ...c, id: uidLocal() })) : [],
+    limiteGlobal: base?.limiteGlobal ? { ...base.limiteGlobal } : undefined,
+    precoComercial: base ? [...base.precoComercial] : FATORES_PADRAO.map((f) => Math.round(200 * f * 100) / 100),
+    precoNTRP: base ? [...base.precoNTRP] : FATORES_PADRAO.map((f) => Math.round(195 * f * 100) / 100),
+  };
+}
+
 const novoProduto = (): Produto => ({
   id: "",
   registroANS: "",
   nome: "",
   descricao: "",
   linha: "Intermediário",
-  codigos: [],
   contratacao: "Individual/Familiar",
   segmentacao: "Ambulatorial + Hospitalar com Obstetrícia",
   abrangencia: "Grupo de Municípios",
@@ -45,9 +57,7 @@ const novoProduto = (): Produto => ({
   formacaoPreco: "Pré-estabelecido",
   situacaoANS: "Ativo",
   statusComercial: "Em elaboração",
-  precoComercial: FATORES_PADRAO.map((f) => Math.round(200 * f * 100) / 100),
-  precoNTRP: FATORES_PADRAO.map((f) => Math.round(195 * f * 100) / 100),
-  coparticipacao: [],
+  perfis: [novoPerfil("Sem coparticipação")],
   rede: [],
   solucoes: [],
   cor: "#2e7d32",
@@ -76,21 +86,39 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
   const prestadores = useStore((s) => s.prestadores);
   const todosProdutos = useStore((s) => s.produtos);
   const codigosEmOutros = new Map(
-    todosProdutos.filter((x) => x.id !== inicial.id).flatMap((x) => x.codigos.map((c) => [c, x.nome] as const)),
+    todosProdutos.filter((x) => x.id !== inicial.id).flatMap((x) => codigosDoProduto(x).map((c) => [c, x.nome] as const)),
   );
+  const [perfilAtivoId, setPerfilAtivoId] = useState(inicial.perfis[0]?.id ?? "");
   const solucoes = useStore((s) => s.solucoes);
   const salvar = useStore((s) => s.salvarProduto);
   const moderacao = useStore((s) => s.config.exigirModeracao);
   const router = useRouter();
   const set = <K extends keyof Produto>(k: K, v: Produto[K]) => setP((x) => ({ ...x, [k]: v }));
 
-  const regrasPreco = validarFaixasRN63(p.precoComercial);
+  const perfil = p.perfis.find((x) => x.id === perfilAtivoId) ?? p.perfis[0];
+  const comCopart = p.fatorModerador !== "Sem fator moderador";
+  const setPerfil = (patch: Partial<PerfilVenda>) =>
+    setP((x) => ({ ...x, perfis: x.perfis.map((pf) => (pf.id === perfil.id ? { ...pf, ...patch } : pf)) }));
+  /** Pendências de um perfil (para o indicador na aba e a lista de erros). */
+  const problemasPerfil = (pf: PerfilVenda): string[] => {
+    const outros = new Set(p.perfis.filter((x) => x.id !== pf.id).flatMap((x) => x.codigos));
+    return [
+      !pf.nome.trim() && "nome do perfil",
+      (pf.codigos.length < MIN_CODIGOS || pf.codigos.length > MAX_CODIGOS) && `${MIN_CODIGOS} a ${MAX_CODIGOS} códigos (hoje ${pf.codigos.length})`,
+      pf.codigos.some((c) => outros.has(c)) && "código repetido em outro perfil",
+      !validarFaixasRN63(pf.precoComercial).every((r) => r.ok) && "tabela fora da RN 63/2003",
+    ].filter(Boolean) as string[];
+  };
+  const regrasPreco = validarFaixasRN63(perfil.precoComercial);
   const regDigitos = p.registroANS.replace(/\D/g, "");
   const erros = [
     !p.nome.trim() && "Informe o nome comercial do produto.",
-    (p.codigos.length < MIN_CODIGOS || p.codigos.length > MAX_CODIGOS) && `Informe de ${MIN_CODIGOS} a ${MAX_CODIGOS} códigos usados no sistema (hoje: ${p.codigos.length}).`,
+    ...p.perfis.map((pf) => {
+      const pr = problemasPerfil(pf);
+      return pr.length > 0 && `Perfil "${pf.nome || "sem nome"}": ${pr.join(", ")}.`;
+    }),
+    new Set(p.perfis.map((pf) => pf.nome.trim().toLowerCase())).size !== p.perfis.length && "Os perfis de coparticipação precisam ter nomes diferentes.",
     regDigitos.length !== 9 && "O nº de registro ANS do produto deve ter 9 dígitos.",
-    !regrasPreco.every((r) => r.ok) && "A tabela de preços não atende à RN 63/2003.",
     p.abrangencia === "Nacional" && p.contratacao === "Individual/Familiar" && "Planos Pessoa Física não podem ter abrangência nacional (regra de negócio).",
     p.abrangencia === "Nacional" && !p.redeNacional && "Produto nacional precisa da rede nacional referenciada (Básica, Especial ou Master).",
     p.abrangencia === "Grupo de Municípios" && p.areaAtuacao.length === 0 && "Selecione ao menos um município da área de atuação.",
@@ -107,10 +135,25 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
   };
 
   const setPreco = (lista: "precoComercial" | "precoNTRP", i: number, v: number) =>
-    setP((x) => ({ ...x, [lista]: x[lista].map((o, j) => (j === i ? v : o)) }));
+    setPerfil({ [lista]: perfil[lista].map((o, j) => (j === i ? v : o)) });
 
   const setCop = (i: number, patch: Partial<ItemCoparticipacao>) =>
-    set("coparticipacao", p.coparticipacao.map((c, j) => (j === i ? { ...c, ...patch } : c)));
+    setPerfil({ coparticipacao: perfil.coparticipacao.map((c, j) => (j === i ? { ...c, ...patch } : c)) });
+  const adicionarPerfil = () => {
+    const pct = Math.max(30, ...p.perfis.map((pf) => Math.max(0, ...pf.coparticipacao.filter((c) => c.tipo === "Percentual").map((c) => c.valor)))) + 20;
+    const alvo = Math.min(pct, 90);
+    const base = novoPerfil(`Coparticipação ${alvo}%`, perfil);
+    // o novo perfil já nasce com o percentual do nome; valores fixos e preços ficam para ajuste
+    const novo = { ...base, coparticipacao: base.coparticipacao.map((c) => (c.tipo === "Percentual" ? { ...c, valor: alvo } : c)) };
+    setP((x) => ({ ...x, perfis: [...x.perfis, novo] }));
+    setPerfilAtivoId(novo.id);
+  };
+  const removerPerfil = () => {
+    if (p.perfis.length < 2 || !confirm(`Remover o perfil "${perfil.nome}"?`)) return;
+    const resto = p.perfis.filter((x) => x.id !== perfil.id);
+    setP((x) => ({ ...x, perfis: resto }));
+    setPerfilAtivoId(resto[0].id);
+  };
 
   return (
     <>
@@ -155,9 +198,7 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
           <Campo label="Descrição" className="md:col-span-3">
             <textarea className="input min-h-24" value={p.descricao} onChange={(e) => set("descricao", e.target.value)} />
           </Campo>
-          <Campo label={`Códigos usados no sistema (${p.codigos.length} de ${MIN_CODIGOS} a ${MAX_CODIGOS})`} className="md:col-span-3">
-            <CodigosInput codigos={p.codigos} onChange={(c) => set("codigos", c)} emUso={codigosEmOutros} />
-          </Campo>
+
         </div>
       </Secao>
 
@@ -243,7 +284,18 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
             }
           />
           <Sel label="Padrão de acomodação" valor={p.acomodacao} opcoes={OPC.acomodacao} onChange={(v) => set("acomodacao", v)} />
-          <Sel label="Fator moderador" valor={p.fatorModerador} opcoes={OPC.fator} onChange={(v) => set("fatorModerador", v)} />
+          <Sel
+            label="Fator moderador"
+            valor={p.fatorModerador}
+            opcoes={OPC.fator}
+            onChange={(v) =>
+              setP((x) =>
+                v === "Sem fator moderador"
+                  ? { ...x, fatorModerador: v, perfis: [{ ...perfil, nome: "Sem coparticipação", coparticipacao: [], limiteGlobal: undefined }] }
+                  : { ...x, fatorModerador: v, perfis: x.perfis.map((pf) => (pf.nome === "Sem coparticipação" ? { ...pf, nome: "Coparticipação 30%" } : pf)) },
+              )
+            }
+          />
           <Sel label="Formação de preço" valor={p.formacaoPreco} opcoes={OPC.formacao} onChange={(v) => set("formacaoPreco", v)} />
           <Sel label="Situação na ANS" valor={p.situacaoANS} opcoes={OPC.situacao} onChange={(v) => set("situacaoANS", v)} />
           <Sel label="Status comercial (interno)" valor={p.statusComercial} opcoes={OPC.status} onChange={(v) => set("statusComercial", v)} />
@@ -303,103 +355,155 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
         )}
       </Secao>
 
-      <Secao titulo="Tabela de preços por faixa etária">
-        <div className="mb-4 flex flex-wrap items-end gap-3">
-          <button
-            className="btn-outline"
-            onClick={() => set("precoComercial", FATORES_PADRAO.map((f) => Math.round(p.precoComercial[0] * f * 100) / 100))}
-          >
-            <Wand2 size={16} /> Gerar faixas a partir da 1ª (fatores padrão)
-          </button>
-          <div className="flex items-end gap-2">
-            <Campo label="Reajuste %">
-              <input type="number" className="input w-24" value={reajuste} onChange={(e) => setReajuste(Number(e.target.value))} />
-            </Campo>
-            <button
-              className="btn-outline"
-              onClick={() => set("precoComercial", p.precoComercial.map((v) => Math.round(v * (1 + reajuste / 100) * 100) / 100))}
-            >
-              Aplicar
+      <Secao titulo={comCopart ? "Perfis de coparticipação, preços e códigos" : "Preços e códigos"}>
+        {comCopart && (
+          <div className="mb-5 flex flex-wrap items-center gap-2 border-b border-gray-200 pb-4">
+            {p.perfis.map((pf) => {
+              const pend = problemasPerfil(pf).length > 0;
+              return (
+                <button
+                  key={pf.id}
+                  type="button"
+                  onClick={() => setPerfilAtivoId(pf.id)}
+                  className={`relative rounded-xl px-3.5 py-2 text-left text-sm transition ring-1 ${pf.id === perfil.id ? "bg-accent text-white ring-accent" : "text-gray-700 ring-gray-300 hover:bg-gray-50"}`}
+                >
+                  <span className="block font-semibold">{pf.nome || "Sem nome"}</span>
+                  <span className={`block text-xs ${pf.id === perfil.id ? "text-white/80" : "text-gray-400"}`}>
+                    1ª faixa {brl(pf.precoComercial[0])} · {pf.codigos.length} códigos
+                  </span>
+                  {pend && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-surface" title="Há pendências neste perfil" />}
+                </button>
+              );
+            })}
+            <button type="button" onClick={adicionarPerfil} className="rounded-xl border border-dashed border-gray-300 px-3.5 py-2 text-sm font-semibold text-gray-500 transition hover:border-brand-400 hover:text-brand-700">
+              <Plus size={14} className="mr-1 inline" /> Adicionar perfil de coparticipação
             </button>
           </div>
+        )}
+
+        <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+          {comCopart ? (
+            <Campo label="Nome do perfil">
+              <input className="input" value={perfil.nome} onChange={(e) => setPerfil({ nome: e.target.value })} placeholder="Ex.: Coparticipação 30%" />
+            </Campo>
+          ) : <div />}
+          {comCopart && p.perfis.length > 1 && (
+            <div className="flex items-end">
+              <button type="button" onClick={removerPerfil} className="btn-outline text-red-600"><Trash2 size={15} /> Remover perfil</button>
+            </div>
+          )}
+          <Campo label={`Códigos usados no sistema${comCopart && p.perfis.length > 1 ? " neste perfil" : ""} (${perfil.codigos.length} de ${MIN_CODIGOS} a ${MAX_CODIGOS})`} className="md:col-span-2">
+            <CodigosInput
+              key={perfil.id}
+              codigos={perfil.codigos}
+              onChange={(c) => setPerfil({ codigos: c })}
+              emUso={new Map([...codigosEmOutros, ...p.perfis.filter((x) => x.id !== perfil.id).flatMap((x) => x.codigos.map((c) => [c, `o perfil ${x.nome}`] as const))])}
+            />
+          </Campo>
         </div>
-        <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
-                <th className="py-1">Faixa</th><th className="py-1">Preço comercial (R$)</th><th className="py-1">NTRP (R$)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {FAIXAS_ETARIAS.map((f, i) => (
-                <tr key={f}>
-                  <td className="py-1 pr-3 font-medium">{i + 1}ª · {f}</td>
-                  <td className="py-1 pr-3"><input type="number" step="0.01" className="input" value={p.precoComercial[i]} onChange={(e) => setPreco("precoComercial", i, Number(e.target.value))} /></td>
-                  <td className="py-1"><input type="number" step="0.01" className="input" value={p.precoNTRP[i]} onChange={(e) => setPreco("precoNTRP", i, Number(e.target.value))} /></td>
-                </tr>
+
+        {comCopart && (
+          <div className="mt-6">
+            <h3 className="mb-2 text-sm font-bold text-brand-900">Coparticipação{p.perfis.length > 1 ? ` · ${perfil.nome}` : ""}</h3>
+            <div className="hidden grid-cols-12 gap-2 sm:grid">
+              <span className="filtro-label col-span-5">Classificação</span>
+              <span className="filtro-label col-span-2">Tipo</span>
+              <span className="filtro-label col-span-2">Valor (% ou R$)</span>
+              <span className="filtro-label col-span-2">Limite da classificação (R$)</span>
+            </div>
+            <div className="space-y-2">
+              {perfil.coparticipacao.map((c, i) => (
+                <div key={c.id} className="grid grid-cols-12 gap-2">
+                  <input className="input col-span-12 sm:col-span-5" value={c.procedimento} onChange={(e) => setCop(i, { procedimento: e.target.value })} />
+                  <select className="input col-span-4 sm:col-span-2" value={c.tipo} onChange={(e) => setCop(i, { tipo: e.target.value as ItemCoparticipacao["tipo"] })}>
+                    <option>Percentual</option><option>Valor fixo</option>
+                  </select>
+                  <input type="number" className="input col-span-3 sm:col-span-2" title={c.tipo === "Percentual" ? "%" : "R$"} value={c.valor} onChange={(e) => setCop(i, { valor: Number(e.target.value) })} />
+                  <input type="number" className="input col-span-3 sm:col-span-2" placeholder="Sem limite" value={c.limite ?? ""} onChange={(e) => setCop(i, { limite: e.target.value ? Number(e.target.value) : undefined })} />
+                  <button className="col-span-2 text-red-500 sm:col-span-1" onClick={() => setPerfil({ coparticipacao: perfil.coparticipacao.filter((_, j) => j !== i) })} aria-label="Remover"><Trash2 size={18} /></button>
+                </div>
               ))}
-            </tbody>
-          </table>
-          <ListaRegras titulo="Validação RN 63/2003" regras={regrasPreco} />
+              <button
+                className="btn-outline"
+                onClick={() => setPerfil({ coparticipacao: [...perfil.coparticipacao, { id: uidLocal(), procedimento: "Nova classificação", tipo: "Valor fixo", valor: 0 }] })}
+              >
+                <Plus size={16} /> Adicionar classificação
+              </button>
+            </div>
+            <div className="mt-4 rounded-xl border border-brand-200 bg-brand-50 p-4">
+              <label className="flex items-center gap-2 text-sm font-semibold text-brand-900">
+                <input
+                  type="checkbox"
+                  className="accent-brand-600"
+                  checked={!!perfil.limiteGlobal}
+                  onChange={(e) => setPerfil({ limiteGlobal: e.target.checked ? { valor: 600, periodo: "Mensal" } : undefined })}
+                />
+                Aplicar limite global (soma de todas as classificações)
+              </label>
+              {perfil.limiteGlobal && (
+                <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <Campo label="Limite global (R$)">
+                    <input type="number" className="input w-40" value={perfil.limiteGlobal.valor} onChange={(e) => setPerfil({ limiteGlobal: { ...perfil.limiteGlobal!, valor: Number(e.target.value) } })} />
+                  </Campo>
+                  <Campo label="Período">
+                    <select className="input w-36" value={perfil.limiteGlobal.periodo} onChange={(e) => setPerfil({ limiteGlobal: { ...perfil.limiteGlobal!, periodo: e.target.value as "Mensal" | "Anual" } })}>
+                      <option>Mensal</option><option>Anual</option>
+                    </select>
+                  </Campo>
+                  <p className="pb-2 text-xs text-gray-500">
+                    Soma dos limites das classificações: {brl(perfil.coparticipacao.reduce((t, c) => t + (c.limite ?? 0), 0))}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6">
+          <h3 className="mb-2 text-sm font-bold text-brand-900">Tabela de preços por faixa etária{comCopart && p.perfis.length > 1 ? ` · ${perfil.nome}` : ""}</h3>
+          <div className="mb-4 flex flex-wrap items-end gap-3">
+            <button
+              className="btn-outline"
+              onClick={() => setPerfil({ precoComercial: FATORES_PADRAO.map((f) => Math.round(perfil.precoComercial[0] * f * 100) / 100) })}
+            >
+              <Wand2 size={16} /> Gerar faixas a partir da 1ª (fatores padrão)
+            </button>
+            <div className="flex items-end gap-2">
+              <Campo label="Reajuste %">
+                <input type="number" className="input w-24" value={reajuste} onChange={(e) => setReajuste(Number(e.target.value))} />
+              </Campo>
+              <button
+                className="btn-outline"
+                onClick={() => setPerfil({ precoComercial: perfil.precoComercial.map((v) => Math.round(v * (1 + reajuste / 100) * 100) / 100) })}
+              >
+                Aplicar
+              </button>
+            </div>
+          </div>
+          <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+                  <th className="py-1">Faixa</th><th className="py-1">Preço comercial (R$)</th><th className="py-1 text-right">Variação</th><th className="py-1">NTRP (R$)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {FAIXAS_ETARIAS.map((f, i) => (
+                  <tr key={f}>
+                    <td className="py-1 pr-3 font-medium">{i + 1}ª · {f}</td>
+                    <td className="py-1 pr-3"><input type="number" step="0.01" className="input" value={perfil.precoComercial[i]} onChange={(e) => setPreco("precoComercial", i, Number(e.target.value))} /></td>
+                    <td className="py-1 pr-3 text-right text-xs text-gray-500">
+                      {i === 0 ? "—" : `${((perfil.precoComercial[i] / perfil.precoComercial[i - 1] - 1) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`}
+                    </td>
+                    <td className="py-1"><input type="number" step="0.01" className="input" value={perfil.precoNTRP[i]} onChange={(e) => setPreco("precoNTRP", i, Number(e.target.value))} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <ListaRegras titulo="Validação RN 63/2003" regras={regrasPreco} />
+          </div>
         </div>
       </Secao>
-
-      {p.fatorModerador !== "Sem fator moderador" && (
-        <Secao titulo={`Perfil de ${p.fatorModerador.toLowerCase()}`}>
-          <div className="hidden grid-cols-12 gap-2 sm:grid">
-            <span className="filtro-label col-span-5">Classificação</span>
-            <span className="filtro-label col-span-2">Tipo</span>
-            <span className="filtro-label col-span-2">Valor (% ou R$)</span>
-            <span className="filtro-label col-span-2">Limite da classificação (R$)</span>
-          </div>
-          <div className="space-y-2">
-            {p.coparticipacao.map((c, i) => (
-              <div key={c.id} className="grid grid-cols-12 gap-2">
-                <input className="input col-span-12 sm:col-span-5" value={c.procedimento} onChange={(e) => setCop(i, { procedimento: e.target.value })} />
-                <select className="input col-span-4 sm:col-span-2" value={c.tipo} onChange={(e) => setCop(i, { tipo: e.target.value as ItemCoparticipacao["tipo"] })}>
-                  <option>Percentual</option><option>Valor fixo</option>
-                </select>
-                <input type="number" className="input col-span-3 sm:col-span-2" title={c.tipo === "Percentual" ? "%" : "R$"} value={c.valor} onChange={(e) => setCop(i, { valor: Number(e.target.value) })} />
-                <input type="number" className="input col-span-3 sm:col-span-2" placeholder="Sem limite" value={c.limite ?? ""} onChange={(e) => setCop(i, { limite: e.target.value ? Number(e.target.value) : undefined })} />
-                <button className="col-span-2 text-red-500 sm:col-span-1" onClick={() => set("coparticipacao", p.coparticipacao.filter((_, j) => j !== i))} aria-label="Remover"><Trash2 size={18} /></button>
-              </div>
-            ))}
-            <button
-              className="btn-outline"
-              onClick={() => set("coparticipacao", [...p.coparticipacao, { id: Math.random().toString(36).slice(2), procedimento: "Nova classificação", tipo: "Valor fixo", valor: 0 }])}
-            >
-              <Plus size={16} /> Adicionar classificação
-            </button>
-          </div>
-
-          <div className="mt-6 rounded-xl border border-brand-200 bg-brand-50 p-4">
-            <label className="flex items-center gap-2 text-sm font-semibold text-brand-900">
-              <input
-                type="checkbox"
-                className="accent-brand-600"
-                checked={!!p.limiteGlobal}
-                onChange={(e) => set("limiteGlobal", e.target.checked ? { valor: 600, periodo: "Mensal" } : undefined)}
-              />
-              Aplicar limite global (soma de todas as classificações)
-            </label>
-            {p.limiteGlobal && (
-              <div className="mt-3 flex flex-wrap items-end gap-3">
-                <Campo label="Limite global (R$)">
-                  <input type="number" className="input w-40" value={p.limiteGlobal.valor} onChange={(e) => set("limiteGlobal", { ...p.limiteGlobal!, valor: Number(e.target.value) })} />
-                </Campo>
-                <Campo label="Período">
-                  <select className="input w-36" value={p.limiteGlobal.periodo} onChange={(e) => set("limiteGlobal", { ...p.limiteGlobal!, periodo: e.target.value as "Mensal" | "Anual" })}>
-                    <option>Mensal</option><option>Anual</option>
-                  </select>
-                </Campo>
-                <p className="pb-2 text-xs text-gray-500">
-                  Soma dos limites das classificações: {brl(p.coparticipacao.reduce((t, c) => t + (c.limite ?? 0), 0))}
-                </p>
-              </div>
-            )}
-          </div>
-        </Secao>
-      )}
 
       <Secao titulo={`Rede direta (${p.rede.length} prestadores)`}>
         {p.abrangencia === "Nacional" && p.redeNacional && (

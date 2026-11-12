@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Kicker, nomeCurto, NIVEL_COR, ProdutoCapa } from "@/components/produto";
 import { CapaSolucao, tom } from "@/components/solucao";
 import { CardStreaming, Fileira, ItemTop, JanelaDetalhe } from "@/components/streaming";
-import { brl, siglaSegmentacao, tipoPessoa } from "@/lib/ans";
+import { brl, codigosDoProduto, perfilReferencia, precoBase, siglaSegmentacao, tipoPessoa } from "@/lib/ans";
 import { usePermissoes, useStore } from "@/lib/store";
 import { FAIXAS_ETARIAS, TIPOS_PRESTADOR, type Produto, type SolucaoAdicional } from "@/lib/types";
 
@@ -80,7 +80,7 @@ export default function PortfolioPage() {
   const filtrando = sel.length > 0 || busca.trim().length > 0;
   const resultado = aplicar(doPublico, sel).filter((p) => {
     const q = busca.trim().toLowerCase();
-    return !q || p.nome.toLowerCase().includes(q) || p.registroANS.includes(q.replace(/\D/g, "") || "§") || p.codigos.some((c) => c.toLowerCase().includes(q));
+    return !q || p.nome.toLowerCase().includes(q) || p.registroANS.includes(q.replace(/\D/g, "") || "§") || codigosDoProduto(p).some((c) => c.toLowerCase().includes(q));
   });
 
   const vendaveis = doPublico.filter((p) => p.statusComercial === "Em comercialização");
@@ -248,7 +248,7 @@ function Hero({ lista, onMais }: { lista: Produto[]; onMais: (id: string) => voi
         </div>
         <p className="mt-3 line-clamp-2 max-w-xl text-sm text-white/85 sm:text-base">{atual.descricao}</p>
         <div className="mt-2 text-sm text-white/80">
-          a partir de <span className="text-lg font-bold text-white">{brl(atual.precoComercial[0])}</span>/mês
+          a partir de <span className="text-lg font-bold text-white">{brl(precoBase(atual))}</span>/mês
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link href={`/produto/?id=${atual.id}`} className="inline-flex items-center gap-2 rounded-md bg-white px-5 py-2.5 text-sm font-bold text-black transition hover:bg-white/80">
@@ -386,7 +386,7 @@ function CardProduto({ p, onClick, largura }: { p: Produto; onClick: () => void;
       }
       info={
         <>
-          <span className="font-semibold text-emerald-300">{brl(p.precoComercial[0])}</span>
+          <span className="font-semibold text-emerald-300">{brl(precoBase(p))}</span>
           <span className="truncate text-white/80">{resumo(p).join(" · ")}</span>
         </>
       }
@@ -406,9 +406,9 @@ function Espiada({ p, onClose, onAbrir }: { p: Produto; onClose: () => void; onA
   const permitidas = solucoes.filter((s) => p.solucoes.includes(s.id) && s.ativa);
   const semelhantes = produtos
     .filter((x) => x.id !== p.id && tipoPessoa(x.contratacao) === tipoPessoa(p.contratacao) && x.statusComercial !== "Fora de comercialização")
-    .sort((a, b) => Number(b.linha === p.linha) - Number(a.linha === p.linha) || Math.abs(a.precoComercial[0] - p.precoComercial[0]) - Math.abs(b.precoComercial[0] - p.precoComercial[0]))
+    .sort((a, b) => Number(b.linha === p.linha) - Number(a.linha === p.linha) || Math.abs(precoBase(a) - precoBase(p)) - Math.abs(precoBase(b) - precoBase(p)))
     .slice(0, 3);
-  const max = Math.max(...p.precoComercial);
+  const max = Math.max(...perfilReferencia(p).precoComercial);
   const rede = prestadores.filter((x) => p.rede.includes(x.id));
 
   return (
@@ -441,6 +441,7 @@ function Espiada({ p, onClose, onAbrir }: { p: Produto; onClose: () => void; onA
             <span className={clsx("font-semibold", p.statusComercial === "Em comercialização" ? "text-emerald-600" : "text-gray-500")}>{p.statusComercial}</span>
             <span className="rounded border border-gray-300 px-1.5 text-xs text-gray-600">{tipoPessoa(p.contratacao)}</span>
             {!!p.vendasMes && <span className="text-xs text-gray-500">{p.vendasMes.toLocaleString("pt-BR")} vidas vendidas no mês</span>}
+            {p.perfis.length > 1 && <span className="text-xs text-gray-500">{p.perfis.length} perfis de coparticipação</span>}
             <span className="text-gray-600">{siglaSegmentacao(p.segmentacao)}</span>
             {p.redeNacional && (
               <span className="rounded px-1.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-white" style={{ background: NIVEL_COR[p.redeNacional] }}>
@@ -462,13 +463,13 @@ function Espiada({ p, onClose, onAbrir }: { p: Produto; onClose: () => void; onA
         <div>
           <h3 className="mb-3 font-bold text-gray-900">Preço por faixa etária</h3>
           <div className="flex h-24 items-end gap-1">
-            {p.precoComercial.map((v, i) => (
+            {perfilReferencia(p).precoComercial.map((v, i) => (
               <div key={i} title={`${FAIXAS_ETARIAS[i]}: ${brl(v)}`} className="flex-1 rounded-t-sm transition hover:opacity-80" style={{ height: `${(v / max) * 100}%`, background: `linear-gradient(to top, ${tom(p.cor, -0.2)}, ${tom(p.cor, 0.35)})` }} />
             ))}
           </div>
           <div className="mt-1 flex justify-between text-[11px] text-gray-500">
-            <span>0–18 · <strong className="text-gray-800">{brl(p.precoComercial[0])}</strong></span>
-            <span>59+ · <strong className="text-gray-800">{brl(p.precoComercial[9])}</strong></span>
+            <span>0–18 · <strong className="text-gray-800">{brl(precoBase(p))}</strong></span>
+            <span>59+ · <strong className="text-gray-800">{brl(perfilReferencia(p).precoComercial[9])}</strong></span>
           </div>
         </div>
         <div>
@@ -507,7 +508,7 @@ function Espiada({ p, onClose, onAbrir }: { p: Produto; onClose: () => void; onA
                 <div className="aspect-video"><ProdutoCapa produto={x} /></div>
                 <div className="p-3">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-emerald-600">{brl(x.precoComercial[0])}</span>
+                    <span className="font-semibold text-emerald-600">{brl(precoBase(x))}</span>
                     <span className="text-gray-500">{x.abrangencia === "Nacional" ? "Nacional" : "Regional"}</span>
                   </div>
                   <p className="mt-1 line-clamp-3 text-xs text-gray-500">{x.descricao}</p>

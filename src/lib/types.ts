@@ -40,6 +40,7 @@ export interface Unidade {
   cidade: string;
   uf: string;
   cnes?: string; // Cadastro Nacional de Estabelecimentos de Saúde (7 dígitos), por unidade
+  codigoLocal: string; // código interno do local de atendimento (ex.: UNPP0254)
   lat: number;
   lng: number;
 }
@@ -64,6 +65,20 @@ export interface ItemCoparticipacao {
   tipo: "Percentual" | "Valor fixo";
   valor: number; // % ou R$
   limite?: number; // limite da classificação em R$
+}
+
+/**
+ * Perfil de venda do produto: um mesmo produto pode ser vendido com perfis de coparticipação
+ * diferentes (ex.: 30% e 50%). Cada perfil tem preço e códigos de sistema próprios.
+ */
+export interface PerfilVenda {
+  id: string;
+  nome: string; // ex.: "Coparticipação 30%"
+  codigos: string[]; // 4 letras + 2 números
+  coparticipacao: ItemCoparticipacao[];
+  limiteGlobal?: LimiteGlobal;
+  precoComercial: number[]; // 10 faixas
+  precoNTRP: number[]; // 10 faixas (Nota Técnica de Registro de Produto)
 }
 
 export interface LimiteGlobal {
@@ -100,7 +115,6 @@ export interface Produto {
   nome: string;
   descricao: string;
   linha: Linha;
-  codigos: string[]; // códigos usados nos sistemas internos: 4 letras + 2 números (4 a 10 por produto)
   vendasMes?: number; // vidas vendidas no último mês (indicador comercial)
   contratacao: TipoContratacao;
   segmentacao: Segmentacao;
@@ -112,10 +126,7 @@ export interface Produto {
   formacaoPreco: FormacaoPreco;
   situacaoANS: SituacaoANS;
   statusComercial: StatusComercial;
-  precoComercial: number[]; // 10 faixas
-  precoNTRP: number[]; // 10 faixas (Nota Técnica de Registro de Produto)
-  coparticipacao: ItemCoparticipacao[];
-  limiteGlobal?: LimiteGlobal;
+  perfis: PerfilVenda[]; // ao menos 1; produtos sem fator moderador têm um único perfil
   rede: string[]; // ids de prestadores da rede direta
   solucoes: string[]; // ids das soluções adicionais permitidas
   cor: string; // cor do card (visual)
