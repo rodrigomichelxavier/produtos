@@ -82,13 +82,27 @@ export const REDES_NACIONAIS: InfoRedeNacional[] = [
   { nivel: "Master", descricao: "Rede Especial + hospitais de excelência e centros de referência de alta complexidade em todo o país." },
 ];
 
+const sol = (
+  id: string, nome: string, icone: SolucaoAdicional["icone"], categoria: SolucaoAdicional["categoria"], fornecedor: string,
+  descricao: string, precoMensal: number, cor: string, cobranca: SolucaoAdicional["cobranca"] = "Por beneficiário", ativa = true,
+): SolucaoAdicional => ({ id, nome, icone, categoria, fornecedor, descricao, precoMensal, cobranca, ativa, cor });
+
 export const SOLUCOES: SolucaoAdicional[] = [
-  { id: "s1", nome: "Cobertura Aeromédica", categoria: "Assistência", fornecedor: "AeroVida Remoções (fictício)", descricao: "Remoção aérea inter-hospitalar em casos de urgência, em todo o território nacional.", precoMensal: 6.9, cobranca: "Por beneficiário", ativa: true, cor: "#0284c7" },
-  { id: "s2", nome: "TotalPass", categoria: "Bem-estar", fornecedor: "TotalPass", descricao: "Acesso a rede de academias e estúdios parceiros com planos a partir de valores reduzidos.", precoMensal: 0, cobranca: "Por beneficiário", ativa: true, cor: "#7c3aed" },
-  { id: "s3", nome: "Clube de Desconto", categoria: "Benefícios", fornecedor: "Clube Aurora+ (fictício)", descricao: "Descontos em farmácias, óticas, cursos e lojas parceiras.", precoMensal: 2.5, cobranca: "Por beneficiário", ativa: true, cor: "#db2777" },
-  { id: "s4", nome: "Seguro Viagem", categoria: "Seguros", fornecedor: "Viaje Seguro (fictício)", descricao: "Assistência médica em viagens internacionais de até 30 dias.", precoMensal: 9.9, cobranca: "Por beneficiário", ativa: true, cor: "#ea580c" },
-  { id: "s5", nome: "Cobertura Pet", categoria: "Assistência", fornecedor: "PetCare (fictício)", descricao: "Consultas veterinárias, vacinas e urgência 24h para cães e gatos.", precoMensal: 29.9, cobranca: "Por contrato", ativa: true, cor: "#16a34a" },
-  { id: "s6", nome: "Assistência Funeral", categoria: "Assistência", fornecedor: "Amparo Familiar (fictício)", descricao: "Assistência funeral familiar com cobertura nacional.", precoMensal: 4.5, cobranca: "Por beneficiário", ativa: false, cor: "#475569" },
+  sol("s1", "Cobertura Aeromédica", "aviao", "Assistência", "AeroVida Remoções (fictício)", "Remoção aérea inter-hospitalar em casos de urgência e emergência, com equipe médica a bordo, em todo o território nacional.", 6.9, "#0369a1"),
+  sol("s2", "TotalPass", "academia", "Bem-estar", "TotalPass", "Acesso a uma ampla rede de academias, estúdios e aulas on-line, com planos a partir de valores reduzidos para beneficiários.", 0, "#6d28d9"),
+  sol("s3", "Clube de Desconto", "desconto", "Benefícios", "Clube Aurora+ (fictício)", "Descontos exclusivos em farmácias, óticas, cursos, lazer e lojas parceiras em todo o país.", 2.5, "#be185d"),
+  sol("s4", "Seguro Viagem", "viagem", "Seguros", "Viaje Seguro (fictício)", "Assistência médica e hospitalar em viagens internacionais de até 30 dias, bagagem extraviada e suporte 24h.", 9.9, "#c2410c"),
+  sol("s5", "Cobertura Pet", "pet", "Assistência", "PetCare (fictício)", "Consultas veterinárias, vacinas, exames e pronto-atendimento 24h para cães e gatos da família.", 29.9, "#15803d", "Por contrato"),
+  sol("s6", "Assistência Funeral", "flor", "Assistência", "Amparo Familiar (fictício)", "Assistência funeral familiar com cobertura nacional e atendimento humanizado 24h.", 4.5, "#475569", "Por beneficiário", false),
+  sol("s7", "Telemedicina 24h", "telemedicina", "Assistência", "Doutor Agora (fictício)", "Pronto-atendimento por vídeo a qualquer hora, com emissão de receitas e atestados digitais.", 3.9, "#0e7490"),
+  sol("s8", "Odonto Essencial", "sorriso", "Assistência", "Sorriso Pleno (fictício)", "Cobertura odontológica com consultas, limpeza, restaurações e urgência odontológica.", 24.9, "#0891b2"),
+  sol("s9", "Programa Gestante", "gestante", "Bem-estar", "Aurora Cuidar (fictício)", "Acompanhamento da gestação com enfermeira dedicada, cursos para gestantes e kit bebê.", 0, "#db2777"),
+  sol("s10", "Check-up Executivo", "checkup", "Bem-estar", "Vitta Check-up (fictício)", "Check-up anual completo em um único dia, com laudo integrado e consulta de devolutiva.", 39.9, "#1d4ed8", "Por beneficiário"),
+  sol("s11", "Desconto em Farmácias", "farmacia", "Benefícios", "Farma+ (fictício)", "Até 35% de desconto em medicamentos de uso contínuo em redes de farmácias parceiras.", 1.9, "#b91c1c"),
+  sol("s12", "Seguro de Vida", "vida", "Seguros", "Proteger Seguros (fictício)", "Indenização por morte e invalidez permanente, com assistência à família.", 12.5, "#334155"),
+  sol("s13", "Assistência Residencial", "casa", "Seguros", "Casa Fácil (fictício)", "Chaveiro, encanador, eletricista e vidraceiro em emergências domésticas.", 5.9, "#a16207"),
+  sol("s14", "Saúde Mental Online", "mente", "Bem-estar", "Mente Leve (fictício)", "Sessões de terapia on-line, meditação guiada e conteúdos sobre bem-estar emocional.", 14.9, "#7e22ce"),
+  sol("s15", "Nutri em Casa", "nutricao", "Bem-estar", "NutriPlena (fictício)", "Consultas on-line com nutricionista e planos alimentares personalizados.", 9.9, "#4d7c0f"),
 ];
 
 const coparPadrao = (consulta: number): ItemCoparticipacao[] => [
@@ -126,7 +140,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: REG_A, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 189.9, ntrp: 182.4, coparticipacao: coparPadrao(30), limiteGlobal: { valor: 600, periodo: "Mensal" },
-    rede: ["h2", "h6", "h7", "pa1", "l1", "l3", "i1", "i4", "c1", "c4", "c8"], solucoes: ["s3"], cor: "#2e7d32", dias: 2,
+    rede: ["h2", "h6", "h7", "pa1", "l1", "l3", "i1", "i4", "c1", "c4", "c8"], solucoes: ["s3", "s7", "s11"], cor: "#2e7d32", dias: 2,
   }),
   prod({
     id: "p2", registroANS: "498765022", nome: "Aurora Essencial Apartamento",
@@ -134,7 +148,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: REG_A, acomodacao: "Apartamento (individual)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 229.5, ntrp: 221.0, coparticipacao: coparPadrao(30), limiteGlobal: { valor: 600, periodo: "Mensal" },
-    rede: ["h2", "h3", "h6", "h7", "pa1", "pa2", "l1", "l3", "i1", "i4", "c1", "c4", "c8"], solucoes: ["s2", "s3"], cor: "#388e3c", dias: 5,
+    rede: ["h2", "h3", "h6", "h7", "pa1", "pa2", "l1", "l3", "i1", "i4", "c1", "c4", "c8"], solucoes: ["s2", "s3", "s7", "s11"], cor: "#388e3c", dias: 5,
   }),
   prod({
     id: "p3", registroANS: "498765033", nome: "Aurora Plus",
@@ -143,14 +157,14 @@ export const PRODUTOS: Produto[] = [
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
     preco: 389.0, ntrp: 372.8, coparticipacao: [],
     rede: ["h1", "h2", "h3", "h4", "h5", "h6", "h7", "h8", "pa1", "pa2", "pa3", "l1", "l2", "l3", "l4", "l5", "i1", "i2", "i4", "c1", "c2", "c3", "c4", "c5", "c6"],
-    solucoes: ["s1", "s2", "s3", "s5"], cor: "#1b5e20", dias: 1,
+    solucoes: ["s1", "s2", "s3", "s5", "s7", "s9", "s14"], cor: "#1b5e20", dias: 1,
   }),
   prod({
     id: "p4", registroANS: "498765044", nome: "Aurora Prime Nacional",
     descricao: "Linha premium: toda a rede direta regional + Rede Nacional Master, com hospitais de excelência em todo o país. Sem coparticipação.",
     contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Nacional", redeNacional: "Master",
     areaAtuacao: NACIONAL, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
-    preco: 749.0, ntrp: 731.5, coparticipacao: [], rede: TODOS, solucoes: ["s1", "s2", "s3", "s4", "s5"], cor: "#0d3b12", dias: 3,
+    preco: 749.0, ntrp: 731.5, coparticipacao: [], rede: TODOS, solucoes: ["s1", "s2", "s3", "s4", "s5", "s7", "s8", "s9", "s10", "s14"], cor: "#0d3b12", dias: 3,
   }),
   prod({
     id: "p5", registroANS: "498765055", nome: "Aurora Hospitalar",
@@ -167,7 +181,7 @@ export const PRODUTOS: Produto[] = [
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 152.3, ntrp: 150.0, coparticipacao: coparPadrao(25), limiteGlobal: { valor: 5000, periodo: "Anual" },
     rede: ["h2", "h3", "h6", "h7", "h8", "pa1", "pa3", "l1", "l2", "l3", "l4", "l5", "l6", "i1", "i2", "i4", "c1", "c2", "c4", "c5", "c6", "c7"],
-    solucoes: ["s2", "s3"], cor: "#33691e", dias: 4,
+    solucoes: ["s2", "s3", "s7", "s15"], cor: "#33691e", dias: 4,
   }),
   prod({
     id: "p7", registroANS: "498765077", nome: "Aurora Empresarial Top",
@@ -176,14 +190,14 @@ export const PRODUTOS: Produto[] = [
     areaAtuacao: NACIONAL, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
     preco: 318.7, ntrp: 305.0, coparticipacao: [],
     rede: ["h1", "h2", "h3", "h4", "h5", "h6", "h7", "h8", "pa1", "pa2", "pa3", "l1", "l2", "l3", "l4", "i1", "i2", "i3", "i4", "c1", "c2", "c3", "c4"],
-    solucoes: ["s1", "s2", "s3", "s4"], cor: "#2e7d32", dias: 6,
+    solucoes: ["s1", "s2", "s3", "s4", "s7", "s10", "s12"], cor: "#2e7d32", dias: 6,
   }),
   prod({
     id: "p8", registroANS: "498765088", nome: "Aurora Executivo Nacional",
     descricao: "Plano coletivo empresarial para executivos: toda a rede direta + Rede Nacional Master e reembolso.",
     contratacao: "Coletivo Empresarial", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Nacional", redeNacional: "Master",
     areaAtuacao: NACIONAL, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
-    preco: 612.0, ntrp: 598.0, coparticipacao: [], rede: TODOS, solucoes: ["s1", "s2", "s3", "s4", "s5"], cor: "#1b5e20", dias: 9,
+    preco: 612.0, ntrp: 598.0, coparticipacao: [], rede: TODOS, solucoes: ["s1", "s2", "s3", "s4", "s5", "s7", "s8", "s10", "s12", "s13"], cor: "#1b5e20", dias: 9,
   }),
   prod({
     id: "p9", registroANS: "498765099", nome: "Aurora Adesão Profissional",
@@ -191,7 +205,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Coletivo por Adesão", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Apartamento (individual)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 244.0, ntrp: 236.9, coparticipacao: coparPadrao(35), limiteGlobal: { valor: 800, periodo: "Mensal" },
-    rede: ["h1", "h2", "h3", "h6", "h8", "pa1", "l1", "l2", "l3", "i1", "i2", "c1", "c2", "c3"], solucoes: ["s3", "s4"], cor: "#43a047", dias: 7,
+    rede: ["h1", "h2", "h3", "h6", "h8", "pa1", "l1", "l2", "l3", "i1", "i2", "c1", "c2", "c3"], solucoes: ["s3", "s4", "s7", "s14"], cor: "#43a047", dias: 7,
   }),
   prod({
     id: "p10", registroANS: "498765100", nome: "Aurora Adesão Universitário",
@@ -199,7 +213,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Coletivo por Adesão", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: ["Campinas/SP", "Hortolândia/SP", "Sumaré/SP"], acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação",
     statusComercial: "Em elaboração", preco: 129.0, ntrp: 125.5, coparticipacao: coparPadrao(20), limiteGlobal: { valor: 400, periodo: "Mensal" },
-    rede: ["h2", "h5", "pa1", "l1", "i1", "c1", "c3"], solucoes: ["s2"], cor: "#689f38", dias: 0,
+    rede: ["h2", "h5", "pa1", "l1", "i1", "c1", "c3"], solucoes: ["s2", "s7", "s14"], cor: "#689f38", dias: 0,
   }),
   prod({
     id: "p11", registroANS: "498765111", nome: "Aurora Referência",
@@ -208,7 +222,7 @@ export const PRODUTOS: Produto[] = [
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
     preco: 198.0, ntrp: 191.0, coparticipacao: [],
     rede: ["h2", "h3", "h6", "h7", "h8", "h10", "pa1", "pa3", "l1", "l3", "l4", "l5", "i1", "i5", "c1", "c4", "c5", "c6", "c7"],
-    solucoes: ["s3"], cor: "#00796b", dias: 20,
+    solucoes: ["s3", "s7"], cor: "#00796b", dias: 20,
   }),
   prod({
     id: "p12", registroANS: "498765122", nome: "Aurora Nacional Básico",
@@ -216,7 +230,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Coletivo Empresarial", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Nacional", redeNacional: "Básica",
     areaAtuacao: NACIONAL, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 209.0, ntrp: 203.0, coparticipacao: coparPadrao(25), limiteGlobal: { valor: 6000, periodo: "Anual" },
-    rede: ["h2", "h6", "h7", "h8", "pa1", "l1", "l3", "l4", "i1", "i4", "c1", "c4"], solucoes: ["s1", "s3"], cor: "#2e8b34", dias: 8,
+    rede: ["h2", "h6", "h7", "h8", "pa1", "l1", "l3", "l4", "i1", "i4", "c1", "c4"], solucoes: ["s1", "s3", "s7", "s12"], cor: "#2e8b34", dias: 8,
   }),
   prod({
     id: "p13", registroANS: "498765133", nome: "Aurora Clássico 2019",

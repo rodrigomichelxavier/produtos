@@ -98,8 +98,16 @@ export interface Produto {
   atualizadoEm: string;
 }
 
+export const ICONES_SOLUCAO = [
+  "aviao", "academia", "desconto", "viagem", "pet", "flor", "telemedicina", "sorriso",
+  "gestante", "checkup", "farmacia", "vida", "casa", "mente", "nutricao",
+] as const;
+export type IconeSolucao = (typeof ICONES_SOLUCAO)[number];
+
 export interface SolucaoAdicional {
   id: string;
+  icone: IconeSolucao;
+  imagem?: string; // capa enviada (data URL); sem ela, a capa é gerada a partir da cor + ícone
   nome: string;
   categoria: "Assistência" | "Bem-estar" | "Benefícios" | "Seguros";
   fornecedor: string;

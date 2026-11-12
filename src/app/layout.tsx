@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AppShell from "@/components/AppShell";
+import "@fontsource/bebas-neue/400.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

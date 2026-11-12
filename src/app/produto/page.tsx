@@ -7,6 +7,7 @@ import { Suspense, useState } from "react";
 import { FeedItem } from "@/components/feed";
 import { AvisoRedeNacional, ProdutoCapa, RedeNacionalBadge, StatusBadge, tomSituacao } from "@/components/produto";
 import { ListaRegras } from "@/components/regras";
+import { CapaSolucao } from "@/components/solucao";
 import { Badge, Tabs, Vazio } from "@/components/ui";
 import { brl, dataBR, desvioNTRP, formatarRegistro, pct, siglaSegmentacao, tipoPessoa, validarFaixasRN63 } from "@/lib/ans";
 import { usePermissoes, useStore } from "@/lib/store";
@@ -241,15 +242,13 @@ function AbaSolucoes({ produto }: { produto: Produto }) {
   const permitidas = solucoes.filter((s) => produto.solucoes.includes(s.id));
   if (!permitidas.length) return <Vazio texto="Este produto não permite a venda de soluções adicionais." />;
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {permitidas.map((s) => (
-        <Link key={s.id} href="/solucoes/" className="flex gap-3 rounded-xl border border-gray-200 p-4 hover:border-brand-300">
-          <span className="h-10 w-1.5 shrink-0 rounded-full" style={{ background: s.cor }} />
-          <div>
-            <div className="font-semibold text-gray-900">{s.nome}</div>
-            <div className="text-xs text-gray-500">{s.categoria} · {s.precoMensal ? `${brl(s.precoMensal)} ${s.cobranca.toLowerCase()}` : "sem custo adicional"}</div>
-            {!s.ativa && <Badge className="mt-1">Inativa</Badge>}
+        <Link key={s.id} href="/solucoes/" className="group">
+          <div className="aspect-video overflow-hidden rounded-md shadow ring-1 ring-black/5 transition group-hover:scale-[1.03]">
+            <CapaSolucao solucao={s} />
           </div>
+          <div className="mt-1.5 text-xs text-gray-500">{s.categoria} · {s.precoMensal ? `${brl(s.precoMensal)}/mês` : "sem custo adicional"}</div>
         </Link>
       ))}
     </div>

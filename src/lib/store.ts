@@ -269,7 +269,7 @@ export const useStore = create<State>()(
     },
     {
       name: "portal-produtos-demo",
-      version: 2,
+      version: 3,
       // Dados de versões anteriores do protótipo são descartados.
       migrate: () => inicial() as unknown as State,
     },
