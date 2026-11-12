@@ -12,6 +12,11 @@ const assinar = (cb: () => void) => {
 };
 const lerEscuro = () => document.documentElement.classList.contains("dark");
 
+/** true quando o modo escuro está ativo. */
+export function useEscuro() {
+  return useSyncExternalStore(assinar, lerEscuro, () => false);
+}
+
 function useTema() {
   const escuro = useSyncExternalStore(assinar, lerEscuro, () => false);
   const alternar = () => {

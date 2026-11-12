@@ -1,0 +1,96 @@
+"use client";
+
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import Link from "next/link";
+import { useEffect, useMemo } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
+import type { Prestador, Produto, Unidade } from "@/lib/types";
+import { TIPO_META } from "./rede-meta";
+
+export type Ponto = { u: Unidade; p: Prestador };
+
+const CENTRO_REGIAO: [number, number] = [-22.84, -47.11];
+
+const iconeCache = new Map<string, L.DivIcon>();
+function iconePara(p: Prestador): L.DivIcon {
+  const chave = `${p.tipo}|${p.destaque ? 1 : 0}`;
+  const pronto = iconeCache.get(chave);
+  if (pronto) return pronto;
+  const { icon: Icon, cor } = TIPO_META[p.tipo];
+  const svg = renderToStaticMarkup(<Icon size={15} strokeWidth={2.2} color={cor} />);
+  const icone = L.divIcon({
+    className: "pino-rede",
+    html: `<div class="pino ${p.destaque ? "pino-destaque" : ""}" style="--cor:${cor}">${svg}</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    tooltipAnchor: [0, -16],
+    popupAnchor: [0, -16],
+  });
+  iconeCache.set(chave, icone);
+  return icone;
+}
+
+/** Ajusta o enquadramento sempre que o conjunto de pontos muda. */
+function Enquadrar({ pontos, chave }: { pontos: Ponto[]; chave: string }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!pontos.length) return;
+    if (pontos.length === 1) {
+      map.flyTo([pontos[0].u.lat, pontos[0].u.lng], 14, { duration: 0.8 });
+      return;
+    }
+    const b = L.latLngBounds(pontos.map((x) => [x.u.lat, x.u.lng] as [number, number]));
+    // deixa espaço para o painel de filtros no topo
+    map.flyToBounds(b, { paddingTopLeft: [60, 230], paddingBottomRight: [60, 50], maxZoom: 13, duration: 0.8 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chave]);
+  return null;
+}
+
+export default function MapaRede({ pontos, produtos, escuro }: { pontos: Ponto[]; produtos: Produto[]; escuro: boolean }) {
+  const chave = useMemo(() => pontos.map((x) => x.u.id).join(","), [pontos]);
+  const estilo = escuro ? "dark_all" : "light_all";
+
+  return (
+    <MapContainer center={CENTRO_REGIAO} zoom={10} zoomControl={false} className="h-full w-full" attributionControl>
+      <TileLayer
+        key={estilo}
+        url={`https://{s}.basemaps.cartocdn.com/${estilo}/{z}/{x}/{y}{r}.png`}
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        subdomains="abcd"
+        maxZoom={19}
+      />
+      <Enquadrar pontos={pontos} chave={chave} />
+      {pontos.map(({ u, p }) => {
+        const meta = TIPO_META[p.tipo];
+        const noPortfolio = produtos.filter((x) => x.rede.includes(p.id));
+        return (
+          <Marker key={u.id} position={[u.lat, u.lng]} icon={iconePara(p)}>
+            <Tooltip direction="top" className="bandeira" opacity={1}>
+              <span className="bandeira-tipo" style={{ color: meta.cor }}>{p.tipo}</span>
+              <strong>{p.nome}</strong>
+              <span className="bandeira-local">{u.bairro} · {u.cidade}</span>
+            </Tooltip>
+            <Popup className="popup-rede" closeButton={false} autoPanPaddingTopLeft={[20, 240]} autoPanPaddingBottomRight={[20, 40]}>
+              <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: meta.cor }}>{p.tipo}</div>
+              <div className="text-sm font-bold text-gray-900">{p.nome}</div>
+              <div className="text-xs text-gray-500">{u.bairro} · {u.cidade}/{u.uf}{u.cnes ? ` · CNES ${u.cnes}` : ""}</div>
+              {p.unidades.length > 1 && <div className="mt-1 text-xs text-gray-500">{p.unidades.length} unidades na região</div>}
+              <div className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Na rede de {noPortfolio.length} produto(s)</div>
+              <div className="mt-1 flex max-w-[240px] flex-wrap gap-1">
+                {noPortfolio.slice(0, 8).map((x) => (
+                  <Link key={x.id} href={`/produto/?id=${x.id}`} className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-700 hover:bg-gray-200">
+                    {x.nome.replace(/^Aurora\s+/, "")}
+                  </Link>
+                ))}
+                {noPortfolio.length > 8 && <span className="text-[11px] text-gray-400">+{noPortfolio.length - 8}</span>}
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
+    </MapContainer>
+  );
+}

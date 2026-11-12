@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, Edit3, Minus, UserPlus } from "lucide-react";
-import { useState } from "react";
+import { Camera, Check, Edit3, Minus, UserPlus } from "lucide-react";
+import { useRef, useState } from "react";
 import { Avatar, Badge, Modal, PageHeader, type Tom } from "@/components/ui";
 import { dataBR } from "@/lib/ans";
 import { PERMISSOES, usePermissoes, useStore } from "@/lib/store";
@@ -121,6 +121,7 @@ export default function UsuariosPage() {
 
 function FormUsuario({ usuario, onClose }: { usuario: Usuario; onClose: () => void }) {
   const [u, setU] = useState(usuario);
+  const fotoRef = useRef<HTMLInputElement>(null);
   const salvar = useStore((s) => s.salvarUsuario);
   const perm = usePermissoes();
   const perfis = PERFIS.filter((p) => p !== "Administrador" || perm.criarAdmin);
@@ -129,6 +130,16 @@ function FormUsuario({ usuario, onClose }: { usuario: Usuario; onClose: () => vo
   return (
     <Modal aberto onClose={onClose} titulo={usuario.id ? "Editar usuário" : "Incluir usuário"}>
       <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <Avatar nome={u.nome || "?"} foto={u.foto} tamanho={64} />
+          <div className="flex gap-2">
+            <button type="button" className="btn-outline py-1.5 text-xs" onClick={() => fotoRef.current?.click()}>
+              <Camera size={14} /> {u.foto ? "Trocar foto" : "Adicionar foto"}
+            </button>
+            {u.foto && <button type="button" className="btn-outline py-1.5 text-xs" onClick={() => setU({ ...u, foto: undefined })}>Remover</button>}
+          </div>
+          <input ref={fotoRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && reduzirFoto(e.target.files[0], (foto) => setU((x) => ({ ...x, foto })))} />
+        </div>
         <div><label className="label">Nome</label><input className="input" value={u.nome} onChange={(e) => setU({ ...u, nome: e.target.value })} /></div>
         <div><label className="label">E-mail corporativo</label><input className="input" value={u.email} onChange={(e) => setU({ ...u, email: e.target.value })} /></div>
         <div><label className="label">Área</label><input className="input" value={u.area} onChange={(e) => setU({ ...u, area: e.target.value })} /></div>
@@ -157,4 +168,17 @@ function FormUsuario({ usuario, onClose }: { usuario: Usuario; onClose: () => vo
       </div>
     </Modal>
   );
+}
+
+/** Recorta a foto em quadrado e reduz para 160px (cabe no armazenamento do navegador). */
+function reduzirFoto(f: File, cb: (url: string) => void) {
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement("canvas");
+    const lado = Math.min(img.width, img.height);
+    c.width = c.height = 160;
+    c.getContext("2d")!.drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, 160, 160);
+    cb(c.toDataURL("image/jpeg", 0.85));
+  };
+  img.src = URL.createObjectURL(f);
 }

@@ -33,14 +33,22 @@ export type StatusComercial = "Em comercialização" | "Fora de comercializaçã
 export const TIPOS_PRESTADOR = ["Hospital", "Pronto atendimento", "Laboratório", "Imagem", "Clínica"] as const;
 export type TipoPrestador = (typeof TIPOS_PRESTADOR)[number];
 
+/** Endereço/unidade de atendimento de um prestador (um laboratório pode ter várias). */
+export interface Unidade {
+  id: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  cnes?: string; // Cadastro Nacional de Estabelecimentos de Saúde (7 dígitos), por unidade
+  lat: number;
+  lng: number;
+}
+
 export interface Prestador {
   id: string;
   nome: string;
   tipo: TipoPrestador;
-  cidade: string;
-  uf: string;
-  bairro: string;
-  cnes?: string; // Cadastro Nacional de Estabelecimentos de Saúde (7 dígitos)
+  unidades: Unidade[];
   ativo: boolean;
   destaque?: boolean; // prestador de referência / premium
 }

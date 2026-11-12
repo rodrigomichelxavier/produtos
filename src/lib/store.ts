@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import {
   ALTERACOES, CONFIG_INICIAL, MATERIAIS, PRESTADORES, PRODUTOS, REDES_NACIONAIS, SOLUCOES, USUARIOS,
 } from "@/data/seed";
@@ -10,6 +10,23 @@ import type {
   Alteracao, Configuracoes, InfoRedeNacional, ItemCoparticipacao, Material, Perfil, Prestador, Produto,
   SolucaoAdicional, TipoAlteracao, Usuario,
 } from "./types";
+
+/** localStorage que avisa (uma vez) quando o espaço do navegador acaba, em vez de falhar em silêncio. */
+let avisouCota = false;
+const armazenamentoSeguro = {
+  getItem: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } },
+  removeItem: (k: string) => { try { localStorage.removeItem(k); } catch {} },
+  setItem: (k: string, v: string) => {
+    try {
+      localStorage.setItem(k, v);
+    } catch {
+      if (!avisouCota) {
+        avisouCota = true;
+        alert("O espaço de armazenamento deste navegador acabou (provavelmente por imagens grandes). A última alteração pode não ter sido salva. Remova algumas imagens de capa ou use 'Restaurar dados da demonstração'.");
+      }
+    }
+  },
+};
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const now = () => new Date().toISOString();
@@ -33,7 +50,15 @@ export const PERMISSOES: Record<Perfil, Permissoes> = {
   Consulta: { editarProdutos: false, moderar: false, gerenciarRede: false, gerenciarSolucoes: false, gerenciarUsuarios: false, criarAdmin: false, configurar: false, enviarMateriais: false },
 };
 
-export const nomePrestador = (p?: Prestador) => (p ? `${p.nome} (${p.bairro} · ${p.cidade}/${p.uf})` : "Prestador removido");
+/** "Bairro · Cidade/UF" das unidades (resumido quando há várias). */
+export function locaisPrestador(p: Prestador): string {
+  const cidades = [...new Set(p.unidades.map((u) => `${u.cidade}/${u.uf}`))];
+  if (p.unidades.length === 1) return `${p.unidades[0].bairro} · ${cidades[0]}`;
+  return `${p.unidades.length} unidades · ${cidades.join(", ")}`;
+}
+
+export const nomePrestador = (p?: Prestador) =>
+  p ? `${p.nome} (${[...new Set(p.unidades.map((u) => `${u.cidade}/${u.uf}`))].join(", ")})` : "Prestador removido";
 
 type Evento = { tipo: TipoAlteracao; titulo: string; detalhes: string[] };
 
@@ -270,9 +295,19 @@ export const useStore = create<State>()(
     },
     {
       name: "portal-produtos-demo",
-      version: 6,
+      storage: createJSONStorage(() => armazenamentoSeguro),
+      version: 7,
       // Dados de versões anteriores do protótipo são descartados.
-      migrate: () => inicial() as unknown as State,
+      // Dados fictícios são renovados, mas usuários (fotos, nomes, perfis) e a configuração são preservados.
+      migrate: (antigo) => {
+        const a = (antigo ?? {}) as Partial<State>;
+        return {
+          ...inicial(),
+          ...(a.usuarios?.length ? { usuarios: a.usuarios } : {}),
+          ...(a.usuarioAtualId ? { usuarioAtualId: a.usuarioAtualId } : {}),
+          ...(a.config ? { config: a.config } : {}),
+        } as unknown as State;
+      },
     },
   ),
 );

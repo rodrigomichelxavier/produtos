@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import {
-  Bell, Box, FolderOpen, GitCompare, Home, LayoutGrid, Menu, Network, Puzzle, Settings, Users, X,
+  Bell, Box, FolderOpen, MapPinned, GitCompare, Home, LayoutGrid, Menu, Network, Puzzle, Settings, Users, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -16,6 +16,7 @@ const NAV = [
   { href: "/portfolio/", label: "Portfólio", icon: LayoutGrid },
   { href: "/solucoes/", label: "Soluções adicionais", icon: Puzzle },
   { href: "/comparativos/", label: "Comparativos", icon: GitCompare },
+  { href: "/mapa/", label: "Mapa de Rede", icon: MapPinned },
   { href: "/materiais/", label: "Materiais", icon: FolderOpen },
   { href: "/notificacoes/", label: "Notificações", icon: Bell },
   { href: "/rede/", label: "Gestão de Rede", icon: Network, restrito: "gerenciarRede" as const },

@@ -9,7 +9,7 @@ import { ListaRegras } from "@/components/regras";
 import { PageHeader, Vazio } from "@/components/ui";
 import { MUNICIPIOS_REGIAO } from "@/data/seed";
 import { brl, validarFaixasRN63 } from "@/lib/ans";
-import { usePermissoes, useStore } from "@/lib/store";
+import { locaisPrestador, usePermissoes, useStore } from "@/lib/store";
 import {
   FAIXAS_ETARIAS, ICONES_PRODUTO, LINHAS, TIPOS_PRESTADOR, type Linha, type Abrangencia, type Acomodacao, type FatorModerador, type FormacaoPreco,
   type ItemCoparticipacao, type Produto, type RedeNacional, type Segmentacao, type SituacaoANS, type StatusComercial,
@@ -410,7 +410,7 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
         </Dica>
         <div className="mt-4 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {TIPOS_PRESTADOR.map((t) => {
-            const lista = prestadores.filter((x) => x.tipo === t && (x.ativo || p.rede.includes(x.id)) && (!soArea || p.abrangencia === "Nacional" || p.areaAtuacao.includes(`${x.cidade}/${x.uf}`)));
+            const lista = prestadores.filter((x) => x.tipo === t && (x.ativo || p.rede.includes(x.id)) && (!soArea || p.abrangencia === "Nacional" || x.unidades.some((u) => p.areaAtuacao.includes(`${u.cidade}/${u.uf}`))));
             return (
               <div key={t}>
                 <div className="mb-2 text-sm font-bold text-brand-900">{t} ({lista.filter((x) => p.rede.includes(x.id)).length}/{lista.length})</div>
@@ -423,7 +423,7 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
                         checked={p.rede.includes(x.id)}
                         onChange={(e) => set("rede", e.target.checked ? [...p.rede, x.id] : p.rede.filter((r) => r !== x.id))}
                       />
-                      <span>{x.nome}<span className="block text-xs text-gray-400">{x.bairro} · {x.cidade}/{x.uf}{!x.ativo && " · inativo"}</span></span>
+                      <span>{x.nome}<span className="block text-xs text-gray-400">{locaisPrestador(x)}{!x.ativo && " · inativo"}</span></span>
                     </label>
                   ))}
                   {!lista.length && <span className="text-xs text-gray-400">Nenhum prestador.</span>}

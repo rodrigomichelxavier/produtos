@@ -1,5 +1,6 @@
 // DADOS 100% FICTÍCIOS — apenas para demonstração do protótipo.
 // Área de atuação regional: 13 municípios da Região Metropolitana de Campinas.
+import { coordenadas, espalhar } from "@/lib/geo";
 import type {
   Alteracao,
   Configuracoes,
@@ -32,48 +33,57 @@ export const MUNICIPIOS_REGIAO = [
 const FATORES = [1, 1.2, 1.38, 1.55, 1.72, 1.95, 2.5, 3.25, 4.2, 5.9];
 const tabela = (base: number) => FATORES.map((f) => Math.round(base * f * 100) / 100);
 
-const pr = (
-  id: string, nome: string, tipo: Prestador["tipo"], cidade: string, bairro: string, cnes: string, destaque = false,
-): Prestador => ({ id, nome, tipo, cidade, uf: "SP", bairro, cnes, ativo: true, destaque });
+type U = [cidade: string, bairro: string, cnes: string];
+const pr = (id: string, nome: string, tipo: Prestador["tipo"], unidades: U[], destaque = false): Prestador => ({
+  id, nome, tipo, ativo: true, destaque,
+  unidades: unidades.map(([cidade, bairro, cnes], i) => {
+    const [lat, lng] = espalhar(coordenadas(cidade, bairro), `${id}u${i + 1}`);
+    return { id: `${id}u${i + 1}`, cidade, uf: "SP", bairro, cnes, lat, lng };
+  }),
+});
 
 export const PRESTADORES: Prestador[] = [
   // Hospitais
-  pr("h1", "Hospital Aurora Central", "Hospital", "Campinas", "Cambuí", "9100001", true),
-  pr("h2", "Hospital Santa Lívia", "Hospital", "Campinas", "Centro", "9100002"),
-  pr("h3", "Hospital e Maternidade Vale Verde", "Hospital", "Campinas", "Taquaral", "9100003"),
-  pr("h4", "Hospital Infantil Pequeno Sol", "Hospital", "Campinas", "Nova Campinas", "9100004", true),
-  pr("h5", "Hospital Barão Geraldo", "Hospital", "Campinas", "Barão Geraldo", "9100005"),
-  pr("h6", "Hospital Bom Pastor", "Hospital", "Sumaré", "Centro", "9100006"),
-  pr("h7", "Hospital Regional Hortolândia", "Hospital", "Hortolândia", "Jardim Amanda", "9100007"),
-  pr("h8", "Hospital Santa Clara de Indaiatuba", "Hospital", "Indaiatuba", "Cidade Nova", "9100008"),
-  pr("h9", "Hospital Vinhedo Saúde", "Hospital", "Vinhedo", "Centro", "9100009"),
-  pr("h10", "Hospital Paulínia Vida", "Hospital", "Paulínia", "Morumbi", "9100010"),
+  pr("h1", "Hospital Aurora Central", "Hospital", [["Campinas", "Cambuí", "9100001"]], true),
+  pr("h2", "Hospital Santa Lívia", "Hospital", [["Campinas", "Centro", "9100002"]]),
+  pr("h3", "Hospital e Maternidade Vale Verde", "Hospital", [["Campinas", "Taquaral", "9100003"]]),
+  pr("h4", "Hospital Infantil Pequeno Sol", "Hospital", [["Campinas", "Nova Campinas", "9100004"]], true),
+  pr("h5", "Hospital Barão Geraldo", "Hospital", [["Campinas", "Barão Geraldo", "9100005"]]),
+  pr("h6", "Hospital Bom Pastor", "Hospital", [["Sumaré", "Centro", "9100006"]]),
+  pr("h7", "Hospital Regional Hortolândia", "Hospital", [["Hortolândia", "Jardim Amanda", "9100007"]]),
+  pr("h8", "Hospital Santa Clara de Indaiatuba", "Hospital", [["Indaiatuba", "Cidade Nova", "9100008"]]),
+  pr("h9", "Hospital Vinhedo Saúde", "Hospital", [["Vinhedo", "Centro", "9100009"]]),
+  pr("h10", "Hospital Paulínia Vida", "Hospital", [["Paulínia", "Morumbi", "9100010"]]),
   // Pronto atendimento
-  pr("pa1", "Pronto Atendimento 24h Guanabara", "Pronto atendimento", "Campinas", "Guanabara", "9200001"),
-  pr("pa2", "PA Infantil Valinhos", "Pronto atendimento", "Valinhos", "Centro", "9200002"),
-  pr("pa3", "Pronto Atendimento Jaguariúna", "Pronto atendimento", "Jaguariúna", "Centro", "9200003"),
-  // Laboratórios
-  pr("l1", "Laboratório Analisa+", "Laboratório", "Campinas", "Cambuí", "9300001"),
-  pr("l2", "LabVida Diagnósticos", "Laboratório", "Campinas", "Castelo", "9300002"),
-  pr("l3", "Laboratório Precisão", "Laboratório", "Sumaré", "Nova Veneza", "9300003"),
-  pr("l4", "Biolab Express", "Laboratório", "Indaiatuba", "Centro", "9300004"),
-  pr("l5", "Laboratório Cosmópolis", "Laboratório", "Cosmópolis", "Centro", "9300005"),
-  pr("l6", "Laboratório Monte Mor", "Laboratório", "Monte Mor", "Centro", "9300006"),
+  pr("pa1", "Pronto Atendimento 24h", "Pronto atendimento", [["Campinas", "Guanabara", "9200001"], ["Campinas", "Sousas", "9200004"]]),
+  pr("pa2", "PA Infantil Valinhos", "Pronto atendimento", [["Valinhos", "Centro", "9200002"]]),
+  pr("pa3", "Pronto Atendimento Jaguariúna", "Pronto atendimento", [["Jaguariúna", "Centro", "9200003"]]),
+  // Laboratórios (alguns com várias unidades)
+  pr("l1", "Laboratório Analisa+", "Laboratório", [
+    ["Campinas", "Cambuí", "9300001"], ["Campinas", "Taquaral", "9300011"], ["Campinas", "Barão Geraldo", "9300012"], ["Campinas", "Jardim Proença", "9300013"],
+  ]),
+  pr("l2", "LabVida Diagnósticos", "Laboratório", [
+    ["Campinas", "Castelo", "9300002"], ["Campinas", "Centro", "9300021"], ["Valinhos", "Centro", "9300022"], ["Vinhedo", "Centro", "9300023"],
+  ]),
+  pr("l3", "Laboratório Precisão", "Laboratório", [["Sumaré", "Nova Veneza", "9300003"], ["Sumaré", "Centro", "9300031"], ["Hortolândia", "Jardim Amanda", "9300032"]]),
+  pr("l4", "Biolab Express", "Laboratório", [["Indaiatuba", "Centro", "9300004"], ["Indaiatuba", "Cidade Nova", "9300041"]]),
+  pr("l5", "Laboratório Cosmópolis", "Laboratório", [["Cosmópolis", "Centro", "9300005"], ["Artur Nogueira", "Centro", "9300051"]]),
+  pr("l6", "Laboratório Monte Mor", "Laboratório", [["Monte Mor", "Centro", "9300006"]]),
   // Imagem
-  pr("i1", "Centro de Imagem Nítida", "Imagem", "Campinas", "Taquaral", "9400001"),
-  pr("i2", "RadioCenter", "Imagem", "Campinas", "Bosque", "9400002"),
-  pr("i3", "Ressonar Premium", "Imagem", "Campinas", "Cambuí", "9400003", true),
-  pr("i4", "Imagem & Diagnóstico Valinhos", "Imagem", "Valinhos", "Jardim Planalto", "9400004"),
-  pr("i5", "Imagem Paulínia", "Imagem", "Paulínia", "Centro", "9400005"),
+  pr("i1", "Centro de Imagem Nítida", "Imagem", [["Campinas", "Taquaral", "9400001"], ["Campinas", "Centro", "9400011"]]),
+  pr("i2", "RadioCenter", "Imagem", [["Campinas", "Bosque", "9400002"]]),
+  pr("i3", "Ressonar Premium", "Imagem", [["Campinas", "Cambuí II", "9400003"]], true),
+  pr("i4", "Imagem & Diagnóstico Valinhos", "Imagem", [["Valinhos", "Jardim Planalto", "9400004"]]),
+  pr("i5", "Imagem Paulínia", "Imagem", [["Paulínia", "Centro", "9400005"], ["Jaguariúna", "Centro", "9400051"]]),
   // Clínicas
-  pr("c1", "Clínica Bem Estar", "Clínica", "Campinas", "Swift", "9500001"),
-  pr("c2", "Policlínica Integrada", "Clínica", "Campinas", "Ponte Preta", "9500002"),
-  pr("c3", "Espaço Terapias Integradas", "Clínica", "Campinas", "Nova Campinas", "9500003"),
-  pr("c4", "Clínica Cuidar Hortolândia", "Clínica", "Hortolândia", "Remanso Campineiro", "9500004"),
-  pr("c5", "Clínica Holambra Saúde", "Clínica", "Holambra", "Centro", "9500005"),
-  pr("c6", "Clínica Artur Nogueira", "Clínica", "Artur Nogueira", "Centro", "9500006"),
-  pr("c7", "Clínica Posse Saúde", "Clínica", "Santo Antônio de Posse", "Centro", "9500007"),
-  pr("c8", "Clínica Mente Sã", "Clínica", "Sumaré", "Centro", "9500008"),
+  pr("c1", "Clínica Bem Estar", "Clínica", [["Campinas", "Swift", "9500001"], ["Campinas", "Barão Geraldo", "9500011"]]),
+  pr("c2", "Policlínica Integrada", "Clínica", [["Campinas", "Ponte Preta", "9500002"]]),
+  pr("c3", "Espaço Terapias Integradas", "Clínica", [["Campinas", "Nova Campinas", "9500003"]]),
+  pr("c4", "Clínica Cuidar Hortolândia", "Clínica", [["Hortolândia", "Remanso Campineiro", "9500004"]]),
+  pr("c5", "Clínica Holambra Saúde", "Clínica", [["Holambra", "Centro", "9500005"]]),
+  pr("c6", "Clínica Artur Nogueira", "Clínica", [["Artur Nogueira", "Centro", "9500006"]]),
+  pr("c7", "Clínica Posse Saúde", "Clínica", [["Santo Antônio de Posse", "Centro", "9500007"]]),
+  pr("c8", "Clínica Mente Sã", "Clínica", [["Sumaré", "Centro", "9500008"]]),
 ];
 
 export const REDES_NACIONAIS: InfoRedeNacional[] = [
@@ -289,7 +299,7 @@ export const MATERIAIS: Material[] = PRODUTOS.flatMap((p, idx) => [
 ]);
 
 export const ALTERACOES: Alteracao[] = [
-  { id: "a1", produtoId: "p3", tipo: "Rede", titulo: "Inclusão de hospital na rede", detalhes: ["Incluído: Hospital Aurora Central (Cambuí · Campinas/SP)"], autorId: "u3", data: diasAtras(1, 2), status: "Publicada", moderadorId: "u2" },
+  { id: "a1", produtoId: "p3", tipo: "Rede", titulo: "Inclusão de hospital na rede", detalhes: ["Incluído: Hospital Aurora Central (Campinas/SP)"], autorId: "u3", data: diasAtras(1, 2), status: "Publicada", moderadorId: "u2" },
   { id: "a2", produtoId: "p1", tipo: "Preço", titulo: "Atualização da tabela de preços", detalhes: ["Reajuste de 6,9% aplicado nas 10 faixas etárias", "1ª faixa: R$ 177,64 → R$ 189,90"], autorId: "u4", data: diasAtras(2, 1), status: "Publicada", moderadorId: "u2" },
   { id: "a3", produtoId: "p5", tipo: "Status", titulo: "Comercialização suspensa", detalhes: ["Status comercial: Em comercialização → Fora de comercialização", "Situação ANS: Ativo → Ativo com comercialização suspensa"], autorId: "u2", data: diasAtras(12), status: "Publicada", moderadorId: "u2" },
   { id: "a4", produtoId: "p6", tipo: "Coparticipação", titulo: "Novo perfil de coparticipação", detalhes: ["Consultas eletivas: R$ 30,00 → R$ 25,00", "Limite global: R$ 5.000,00 (anual)"], autorId: "u3", data: diasAtras(4), status: "Publicada", moderadorId: "u2" },
@@ -298,7 +308,7 @@ export const ALTERACOES: Alteracao[] = [
   { id: "a7", produtoId: "p4", tipo: "Soluções adicionais", titulo: "Nova solução adicional disponível", detalhes: ["Permitido: Cobertura Pet"], autorId: "u3", data: diasAtras(3, 4), status: "Publicada", moderadorId: "u2" },
   { id: "a8", produtoId: "p10", tipo: "Novo produto", titulo: "Produto cadastrado: Aurora Adesão Universitário", detalhes: ["Produto em elaboração — aguardando registro na ANS"], autorId: "u3", data: diasAtras(0, 5), status: "Pendente" },
   { id: "a9", produtoId: "p2", tipo: "Cadastro", titulo: "Correção na descrição do produto", detalhes: ["Descrição: correção de erro de digitação"], autorId: "u4", data: diasAtras(0, 3), status: "Pendente" },
-  { id: "a10", produtoId: "p7", tipo: "Rede", titulo: "Inclusão de prestador premium", detalhes: ["Incluído: Ressonar Premium (Cambuí · Campinas/SP)"], autorId: "u3", data: diasAtras(0, 1), status: "Pendente" },
+  { id: "a10", produtoId: "p7", tipo: "Rede", titulo: "Inclusão de prestador premium", detalhes: ["Incluído: Ressonar Premium (Campinas/SP)"], autorId: "u3", data: diasAtras(0, 1), status: "Pendente" },
   { id: "a11", produtoId: "p4", tipo: "Preço", titulo: "Ajuste pontual na 1ª faixa", detalhes: ["Lançamento duplicado por erro material"], autorId: "u4", data: diasAtras(3), status: "Descartada", moderadorId: "u2", motivo: "Erro material — não comunicar" },
 ];
 

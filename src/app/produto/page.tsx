@@ -228,7 +228,9 @@ function AbaRede({ produto, tipo }: { produto: Produto; tipo: TipoPrestador }) {
                 <div className="flex items-center gap-1 font-semibold text-gray-900">
                   {p.nome} {p.destaque && <Star size={14} className="fill-amber-400 text-amber-400" />}
                 </div>
-                <div className="text-xs text-gray-500">{p.bairro} · {p.cidade}/{p.uf}</div>
+                <ul className="mt-0.5 space-y-0.5 text-xs text-gray-500">
+                  {p.unidades.map((u) => <li key={u.id}>{u.bairro} · {u.cidade}/{u.uf}</li>)}
+                </ul>
               </div>
             </div>
           ))}

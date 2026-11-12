@@ -6,7 +6,8 @@ import { NIVEL_COR } from "@/components/produto";
 import { Badge, Modal, PageHeader, Tabs, Vazio } from "@/components/ui";
 import { MUNICIPIOS_REGIAO } from "@/data/seed";
 import { usePermissoes, useStore } from "@/lib/store";
-import { TIPOS_PRESTADOR, type InfoRedeNacional, type Prestador, type TipoPrestador } from "@/lib/types";
+import { coordenadas, espalhar } from "@/lib/geo";
+import { TIPOS_PRESTADOR, type InfoRedeNacional, type Prestador, type TipoPrestador, type Unidade } from "@/lib/types";
 
 const ABAS = ["Prestadores (rede direta)", "Redes nacionais"] as const;
 const CIDADES = MUNICIPIOS_REGIAO.map((m) => m.split("/")[0]);
@@ -46,16 +47,16 @@ function Prestadores() {
     () =>
       prestadores
         .filter((p) => tipo === "Todos" || p.tipo === tipo)
-        .filter((p) => cidade === "Todas" || p.cidade === cidade)
+        .filter((p) => cidade === "Todas" || p.unidades.some((u) => u.cidade === cidade))
         .filter((p) => {
           const q = busca.trim().toLowerCase();
-          return !q || `${p.nome} ${p.bairro} ${p.cnes ?? ""}`.toLowerCase().includes(q);
+          return !q || `${p.nome} ${p.unidades.map((u) => `${u.bairro} ${u.cnes ?? ""}`).join(" ")}`.toLowerCase().includes(q);
         })
-        .sort((a, b) => a.cidade.localeCompare(b.cidade) || a.nome.localeCompare(b.nome)),
+        .sort((a, b) => a.tipo.localeCompare(b.tipo) || a.nome.localeCompare(b.nome)),
     [prestadores, tipo, cidade, busca],
   );
 
-  const novo = (): Prestador => ({ id: "", nome: "", tipo: "Hospital", cidade: "Campinas", uf: "SP", bairro: "", cnes: "", ativo: true });
+  const novo = (): Prestador => ({ id: "", nome: "", tipo: "Laboratório", unidades: [novaUnidade()], ativo: true });
 
   return (
     <>
@@ -78,7 +79,7 @@ function Prestadores() {
           <span className="filtro-label">Cidade</span>
           <select className="input" value={cidade} onChange={(e) => setCidade(e.target.value)}>
             <option>Todas</option>
-            {[...new Set(prestadores.map((p) => p.cidade))].sort().map((c) => <option key={c}>{c}</option>)}
+            {[...new Set(prestadores.flatMap((p) => p.unidades.map((u) => u.cidade)))].sort().map((c) => <option key={c}>{c}</option>)}
           </select>
         </div>
         <button className="btn-primary" onClick={() => setEditando(novo())}><Plus size={16} /> Novo prestador</button>
@@ -99,24 +100,28 @@ function Prestadores() {
               <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
                 <th className="py-2 pr-3">Prestador</th>
                 <th className="py-2 pr-3">Tipo</th>
-                <th className="py-2 pr-3">Bairro</th>
-                <th className="py-2 pr-3">Cidade/UF</th>
-                <th className="py-2 pr-3">CNES</th>
+                <th className="py-2 pr-3">Unidades (bairro · cidade/UF · CNES)</th>
                 <th className="py-2 pr-3 text-center">Produtos</th>
                 <th className="py-2" />
               </tr>
             </thead>
             <tbody>
               {lista.map((p) => (
-                <tr key={p.id} className={`border-b border-gray-100 ${!p.ativo ? "opacity-50" : ""}`}>
+                <tr key={p.id} className={`border-b border-gray-100 align-top ${!p.ativo ? "opacity-50" : ""}`}>
                   <td className="py-2 pr-3 font-medium text-gray-900">
                     {p.nome} {p.destaque && <Star size={13} className="inline fill-amber-400 text-amber-400" />}
                     {!p.ativo && <Badge className="ml-2">Inativo</Badge>}
                   </td>
                   <td className="py-2 pr-3 text-gray-600">{p.tipo}</td>
-                  <td className="py-2 pr-3 text-gray-600">{p.bairro}</td>
-                  <td className="py-2 pr-3 text-gray-600">{p.cidade}/{p.uf}</td>
-                  <td className="py-2 pr-3 text-gray-500">{p.cnes || "—"}</td>
+                  <td className="py-2 pr-3 text-gray-600">
+                    <ul className="space-y-0.5">
+                      {p.unidades.map((u) => (
+                        <li key={u.id}>
+                          {u.bairro} · {u.cidade}/{u.uf} <span className="text-xs text-gray-400">{u.cnes ? `CNES ${u.cnes}` : ""}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
                   <td className="py-2 pr-3 text-center" title={uso(p.id).map((x) => x.nome).join("\n")}>{uso(p.id).length}</td>
                   <td className="whitespace-nowrap py-2 text-right">
                     <button className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100" onClick={() => setEditando(p)} aria-label="Editar"><Edit3 size={16} /></button>
@@ -145,28 +150,72 @@ function Prestadores() {
   );
 }
 
+function novaUnidade(cidade = "Campinas"): Unidade {
+  const id = `un${Math.random().toString(36).slice(2, 8)}`;
+  const [lat, lng] = espalhar(coordenadas(cidade, ""), id);
+  return { id, bairro: "", cidade, uf: "SP", cnes: "", lat, lng };
+}
+
 function FormPrestador({ prestador, onClose }: { prestador: Prestador; onClose: () => void }) {
   const salvar = useStore((s) => s.salvarPrestador);
   const [p, setP] = useState(prestador);
-  const valido = p.nome.trim() && p.cidade.trim() && p.bairro.trim() && /^[A-Z]{2}$/.test(p.uf) && (!p.cnes || /^\d{7}$/.test(p.cnes));
+  const setU = (i: number, patch: Partial<Unidade>) =>
+    setP((x) => ({
+      ...x,
+      unidades: x.unidades.map((u, j) => {
+        if (j !== i) return u;
+        const n = { ...u, ...patch };
+        // posição aproximada recalculada quando muda cidade/bairro
+        if (patch.cidade !== undefined || patch.bairro !== undefined) [n.lat, n.lng] = espalhar(coordenadas(n.cidade, n.bairro), n.id);
+        return n;
+      }),
+    }));
+  const valido =
+    p.nome.trim() && p.unidades.length > 0 &&
+    p.unidades.every((u) => u.cidade.trim() && u.bairro.trim() && /^[A-Z]{2}$/.test(u.uf) && (!u.cnes || /^\d{7}$/.test(u.cnes)));
   return (
-    <Modal aberto onClose={onClose} titulo={prestador.id ? "Editar prestador" : "Novo prestador"}>
+    <Modal aberto onClose={onClose} titulo={prestador.id ? "Editar prestador" : "Novo prestador"} largura="max-w-2xl">
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2"><label className="label">Nome</label><input className="input" value={p.nome} onChange={(e) => setP({ ...p, nome: e.target.value })} /></div>
+        <div><label className="label">Nome</label><input className="input" value={p.nome} onChange={(e) => setP({ ...p, nome: e.target.value })} /></div>
         <div>
           <label className="label">Tipo</label>
           <select className="input" value={p.tipo} onChange={(e) => setP({ ...p, tipo: e.target.value as TipoPrestador })}>
             {TIPOS_PRESTADOR.map((t) => <option key={t}>{t}</option>)}
           </select>
         </div>
-        <div><label className="label">CNES (7 dígitos)</label><input className="input" maxLength={7} value={p.cnes ?? ""} onChange={(e) => setP({ ...p, cnes: e.target.value.replace(/\D/g, "") })} /></div>
-        <div>
-          <label className="label">Cidade</label>
-          <input className="input" list="cidades" value={p.cidade} onChange={(e) => setP({ ...p, cidade: e.target.value })} />
-          <datalist id="cidades">{CIDADES.map((c) => <option key={c} value={c} />)}</datalist>
+      </div>
+
+      <div className="mt-5">
+        <div className="mb-2 flex items-center justify-between">
+          <label className="label !mb-0">Unidades de atendimento ({p.unidades.length})</label>
+          <button type="button" className="text-xs font-semibold text-brand-700 hover:underline" onClick={() => setP({ ...p, unidades: [...p.unidades, novaUnidade(p.unidades.at(-1)?.cidade)] })}>
+            + Adicionar unidade
+          </button>
         </div>
-        <div><label className="label">UF</label><input className="input" maxLength={2} value={p.uf} onChange={(e) => setP({ ...p, uf: e.target.value.toUpperCase() })} /></div>
-        <div className="sm:col-span-2"><label className="label">Bairro</label><input className="input" value={p.bairro} onChange={(e) => setP({ ...p, bairro: e.target.value })} /></div>
+        <datalist id="cidades">{CIDADES.map((c) => <option key={c} value={c} />)}</datalist>
+        <div className="space-y-2">
+          {p.unidades.map((u, i) => (
+            <div key={u.id} className="grid grid-cols-12 items-end gap-2 rounded-lg border border-gray-200 p-2">
+              <div className="col-span-12 sm:col-span-4"><span className="filtro-label">Bairro</span><input className="input" value={u.bairro} onChange={(e) => setU(i, { bairro: e.target.value })} /></div>
+              <div className="col-span-6 sm:col-span-4"><span className="filtro-label">Cidade</span><input className="input" list="cidades" value={u.cidade} onChange={(e) => setU(i, { cidade: e.target.value })} /></div>
+              <div className="col-span-2 sm:col-span-1"><span className="filtro-label">UF</span><input className="input px-2" maxLength={2} value={u.uf} onChange={(e) => setU(i, { uf: e.target.value.toUpperCase() })} /></div>
+              <div className="col-span-3 sm:col-span-2"><span className="filtro-label">CNES</span><input className="input px-2" maxLength={7} value={u.cnes ?? ""} onChange={(e) => setU(i, { cnes: e.target.value.replace(/\D/g, "") })} /></div>
+              <button
+                type="button"
+                className="col-span-1 pb-2 text-red-500 disabled:opacity-30"
+                disabled={p.unidades.length === 1}
+                onClick={() => setP({ ...p, unidades: p.unidades.filter((_, j) => j !== i) })}
+                aria-label="Remover unidade"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <p className="mt-1 text-[11px] text-gray-400">A posição no Mapa de Rede é estimada pelo bairro e cidade.</p>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-6">
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="accent-brand-600" checked={!!p.destaque} onChange={(e) => setP({ ...p, destaque: e.target.checked })} />
           Prestador de referência (destaque)

@@ -24,7 +24,11 @@ export default function PerfilPage() {
       const s = Math.min(img.width, img.height);
       c.width = c.height = 160;
       c.getContext("2d")!.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 160, 160);
-      setU((x) => ({ ...x, foto: c.toDataURL("image/jpeg", 0.85) }));
+      const foto = c.toDataURL("image/jpeg", 0.85);
+      setU((x) => ({ ...x, foto }));
+      // a foto é gravada na hora, sem depender do botão "Salvar dados"
+      salvar({ ...useStore.getState().usuarios.find((x) => x.id === atual.id)!, foto });
+      setMsg("Foto atualizada.");
     };
     img.src = URL.createObjectURL(f);
   };

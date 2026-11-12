@@ -145,3 +145,76 @@ body {
   color: transparent;
   line-height: 0.8;
 }
+
+/* ---------- Mapa de Rede ---------- */
+.pino-rede {
+  background: none;
+  border: none;
+}
+.pino {
+  display: flex;
+  height: 30px;
+  width: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--color-surface);
+  border: 2px solid var(--cor);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  transition: transform 0.15s ease;
+}
+.pino:hover {
+  transform: scale(1.18);
+}
+.pino-destaque {
+  box-shadow: 0 0 0 3px #fbbf24, 0 2px 8px rgb(0 0 0 / 0.3);
+}
+.leaflet-tooltip.bandeira {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 11px;
+  border: none;
+  border-radius: 10px;
+  background: rgb(17 24 39 / 0.94);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.25;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.3);
+}
+.leaflet-tooltip.bandeira::before {
+  border-top-color: rgb(17 24 39 / 0.94);
+}
+.bandeira-tipo {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  filter: brightness(1.6);
+}
+.bandeira-local {
+  font-size: 11px;
+  color: rgb(255 255 255 / 0.65);
+}
+.popup-rede .leaflet-popup-content-wrapper,
+.popup-rede .leaflet-popup-tip {
+  background: var(--color-surface);
+  color: var(--color-gray-900);
+  border-radius: 12px;
+}
+.popup-rede .leaflet-popup-content {
+  margin: 12px 14px;
+  font-family: var(--font-sans);
+}
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: var(--color-page);
+}
+.leaflet-control-attribution {
+  font-size: 10px;
+  background: rgb(255 255 255 / 0.6) !important;
+}
+.popup-rede a {
+  color: var(--color-gray-700) !important;
+}

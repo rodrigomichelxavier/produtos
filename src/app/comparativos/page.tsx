@@ -8,7 +8,7 @@ import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } fro
 import { NIVEL_COR, ProdutoCapa } from "@/components/produto";
 import { PageHeader, Vazio } from "@/components/ui";
 import { brl, formatarRegistro, pct } from "@/lib/ans";
-import { useStore } from "@/lib/store";
+import { locaisPrestador, useStore } from "@/lib/store";
 import { FAIXAS_ETARIAS, type Prestador, type Produto, type TipoPrestador } from "@/lib/types";
 
 const COR_A = "#2e8b34";
@@ -196,20 +196,20 @@ function ComparaRede({ a, b, tipo, label }: { a: Produto; b: Produto; tipo: Tipo
   const ambos = todos.filter((p) => a.rede.includes(p.id) && b.rede.includes(p.id));
   const total = soA.length + soB.length + ambos.length;
   if (!total) return null;
-  const w = (n: number) => `${(n / total) * 100}%`;
+  const dif = soA.length - soB.length;
+  const frase =
+    dif === 0 ? "mesma quantidade" : `${dif > 0 ? a.nome : b.nome} tem ${Math.abs(dif)} a mais`;
 
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-semibold text-gray-800">{label}</h3>
         <span className="text-xs text-gray-500">
-          A: {soA.length + ambos.length} · B: {soB.length + ambos.length} · em comum: {ambos.length}
+          <span style={{ color: COR_A }} className="font-semibold">A: {soA.length + ambos.length}</span>
+          {" · "}
+          <span style={{ color: COR_B }} className="font-semibold">B: {soB.length + ambos.length}</span>
+          {" · "}em comum: {ambos.length} · <span className="font-semibold text-gray-700">{frase}</span>
         </span>
-      </div>
-      <div className="mb-3 flex h-3 overflow-hidden rounded-full bg-gray-100">
-        <div style={{ width: w(soA.length), background: COR_A }} title="Somente A" />
-        <div style={{ width: w(ambos.length) }} className="bg-gray-300" title="Em ambos" />
-        <div style={{ width: w(soB.length), background: COR_B }} title="Somente B" />
       </div>
       <div className="grid gap-3 md:grid-cols-3">
         <Coluna titulo={`Somente em ${a.nome}`} cor={COR_A} itens={soA} icone={<Plus size={14} />} />
@@ -235,7 +235,7 @@ function Coluna({ titulo, cor, itens, icone }: { titulo: string; cor: string; it
               <span className="mt-0.5" style={{ color: cor }}>{icone ?? "•"}</span>
               <span>
                 {p.nome} {p.destaque && <Star size={12} className="inline fill-amber-400 text-amber-400" />}
-                <span className="block text-xs text-gray-400">{p.bairro} · {p.cidade}/{p.uf}</span>
+                <span className="block text-xs text-gray-400">{locaisPrestador(p)}</span>
               </span>
             </li>
           ))}
