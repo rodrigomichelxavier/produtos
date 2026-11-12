@@ -174,7 +174,7 @@ interface State {
   salvarProduto: (p: Produto) => string;
   excluirProduto: (id: string) => void;
   moderar: (ids: string[], status: "Publicada" | "Descartada", motivo?: string) => void;
-  salvarPrestador: (p: Prestador) => void;
+  salvarPrestador: (p: Prestador, produtoIds?: string[]) => void;
   excluirPrestador: (id: string) => void;
   salvarRedesNacionais: (r: InfoRedeNacional[]) => void;
   salvarSolucao: (s: SolucaoAdicional, produtoIds: string[]) => void;
@@ -250,12 +250,22 @@ export const useStore = create<State>()(
             ),
           })),
 
-        salvarPrestador: (p) =>
+        /** Salva o prestador e, se informado, sincroniza em quais produtos ele faz parte da rede direta. */
+        salvarPrestador: (p, produtoIds) => {
+          const salvo = { ...p, id: p.id || `pr${uid()}` };
           set((s) => ({
-            prestadores: s.prestadores.some((x) => x.id === p.id)
-              ? s.prestadores.map((x) => (x.id === p.id ? p : x))
-              : [...s.prestadores, { ...p, id: p.id || `pr${uid()}` }],
-          })),
+            prestadores: s.prestadores.some((x) => x.id === salvo.id)
+              ? s.prestadores.map((x) => (x.id === salvo.id ? salvo : x))
+              : [...s.prestadores, salvo],
+          }));
+          if (!produtoIds) return;
+          // gravar() gera os eventos "Alteração na rede credenciada" de cada produto afetado
+          get().produtos.forEach((prod) => {
+            const tem = prod.rede.includes(salvo.id);
+            const deve = produtoIds.includes(prod.id);
+            if (tem !== deve) gravar({ ...prod, rede: deve ? [...prod.rede, salvo.id] : prod.rede.filter((r) => r !== salvo.id) });
+          });
+        },
 
         excluirPrestador: (id) => set((s) => ({ prestadores: s.prestadores.filter((p) => p.id !== id) })),
 

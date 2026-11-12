@@ -160,6 +160,8 @@ function novaUnidade(cidade = "Campinas"): Unidade {
 function FormPrestador({ prestador, onClose }: { prestador: Prestador; onClose: () => void }) {
   const salvar = useStore((s) => s.salvarPrestador);
   const todos = useStore((s) => s.prestadores);
+  const produtos = useStore((s) => s.produtos);
+  const [naRede, setNaRede] = useState(() => produtos.filter((x) => x.rede.includes(prestador.id)).map((x) => x.id));
   const [p, setP] = useState(prestador);
   const codigosLocaisEmUso = new Set(todos.filter((x) => x.id !== prestador.id).flatMap((x) => x.unidades.map((u) => u.codigoLocal)));
   const setU = (i: number, patch: Partial<Unidade>) =>
@@ -231,12 +233,37 @@ function FormPrestador({ prestador, onClose }: { prestador: Prestador; onClose: 
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="accent-brand-600" checked={p.ativo} onChange={(e) => setP({ ...p, ativo: e.target.checked })} />
-          Ativo (disponível para novos produtos)
+          Ativo (aparece na lista de prestadores ao cadastrar produtos)
         </label>
+      </div>
+
+      <div className="mt-5">
+        <div className="mb-2 flex items-center justify-between">
+          <label className="label !mb-0">Incluir na rede direta dos produtos ({naRede.length} de {produtos.length})</label>
+          <div className="flex gap-3 text-xs font-semibold text-brand-700">
+            <button type="button" onClick={() => setNaRede(produtos.map((x) => x.id))}>Todos</button>
+            <button type="button" onClick={() => setNaRede(produtos.filter((x) => x.statusComercial === "Em comercialização").map((x) => x.id))}>Em comercialização</button>
+            <button type="button" onClick={() => setNaRede([])}>Nenhum</button>
+          </div>
+        </div>
+        <div className="grid max-h-44 gap-1 overflow-y-auto rounded-xl border border-gray-200 p-3 sm:grid-cols-2">
+          {produtos.map((x) => (
+            <label key={x.id} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="accent-brand-600"
+                checked={naRede.includes(x.id)}
+                onChange={(e) => setNaRede(e.target.checked ? [...naRede, x.id] : naRede.filter((id) => id !== x.id))}
+              />
+              {x.nome}
+            </label>
+          ))}
+        </div>
+        <p className="mt-1 text-[11px] text-gray-400">Ao salvar, o prestador entra (ou sai) da rede dos produtos marcados, e cada mudança gera notificação para moderação.</p>
       </div>
       <div className="mt-6 flex justify-end gap-2">
         <button className="btn-outline" onClick={onClose}>Cancelar</button>
-        <button className="btn-primary" disabled={!valido} onClick={() => { salvar(p); onClose(); }}>Salvar</button>
+        <button className="btn-primary" disabled={!valido} onClick={() => { salvar(p, naRede); onClose(); }}>Salvar</button>
       </div>
     </Modal>
   );
