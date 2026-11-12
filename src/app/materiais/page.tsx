@@ -9,7 +9,7 @@ import { dataBR } from "@/lib/ans";
 import { usePermissoes, useStore } from "@/lib/store";
 import type { CategoriaMaterial, Material } from "@/lib/types";
 
-const CATEGORIAS = ["Uso interno", "Uso externo", "Lâminas", "Tabelas de preço"] as const satisfies readonly CategoriaMaterial[];
+const CATEGORIAS = ["Uso interno", "Uso externo"] as const satisfies readonly CategoriaMaterial[];
 const ICONES: Record<Material["formato"], typeof FileText> = {
   PDF: FileText, PNG: FileImage, JPG: FileImage, PPTX: Presentation, XLSX: FileSpreadsheet, MP4: FileVideo, DOCX: FileText,
 };
@@ -143,7 +143,7 @@ function ModalUpload({ aberto, onClose, produtoId, categoria }: {
         </div>
         <div>
           <label className="label">Título</label>
-          <input className="input" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Lâmina de vendas 2027" />
+          <input className="input" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Lâmina de vendas 2027, Tabela de preços…" />
           <p className="mt-1 text-xs text-gray-400">Use o mesmo título de um material existente para publicar uma nova versão.</p>
         </div>
         <div>

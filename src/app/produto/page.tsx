@@ -5,20 +5,19 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { FeedItem } from "@/components/feed";
-import { ProdutoCapa, StatusBadge, tomSituacao } from "@/components/produto";
+import { AvisoRedeNacional, ProdutoCapa, RedeNacionalBadge, StatusBadge, tomSituacao } from "@/components/produto";
 import { ListaRegras } from "@/components/regras";
 import { Badge, Tabs, Vazio } from "@/components/ui";
-import { PRESTADORES } from "@/data/seed";
-import {
-  brl, dataBR, desvioNTRP, formatarRegistro, pct, siglaSegmentacao, tipoPessoa, validarCoparticipacao, validarFaixasRN63,
-} from "@/lib/ans";
+import { brl, dataBR, desvioNTRP, formatarRegistro, pct, siglaSegmentacao, tipoPessoa, validarFaixasRN63 } from "@/lib/ans";
 import { usePermissoes, useStore } from "@/lib/store";
 import { FAIXAS_ETARIAS, type Produto, type TipoPrestador } from "@/lib/types";
 
-const ABAS = ["Preço", "Perfil de Coparticipação", "Hospitais", "Laboratórios", "Imagem", "Clínicas", "Mais…"] as const;
+const ABAS = [
+  "Preço", "Perfil de Coparticipação", "Hospitais", "Pronto atendimento", "Laboratórios", "Imagem", "Clínicas", "Soluções adicionais", "Mais…",
+] as const;
 type Aba = (typeof ABAS)[number];
 const ABA_TIPO: Partial<Record<Aba, TipoPrestador>> = {
-  Hospitais: "Hospital", Laboratórios: "Laboratório", Imagem: "Imagem", Clínicas: "Clínica",
+  Hospitais: "Hospital", "Pronto atendimento": "Pronto atendimento", Laboratórios: "Laboratório", Imagem: "Imagem", Clínicas: "Clínica",
 };
 
 export default function Page() {
@@ -28,6 +27,7 @@ export default function Page() {
 function ProdutoDetalhe() {
   const id = useSearchParams().get("id");
   const produto = useStore((s) => s.produtos.find((p) => p.id === id));
+  const prestadores = useStore((s) => s.prestadores);
   const [aba, setAba] = useState<Aba>("Preço");
   const perm = usePermissoes();
   const excluir = useStore((s) => s.excluirProduto);
@@ -35,10 +35,11 @@ function ProdutoDetalhe() {
 
   if (!produto) return <Vazio texto="Produto não encontrado." />;
 
-  const rede = PRESTADORES.filter((p) => produto.rede.includes(p.id));
+  const rede = prestadores.filter((p) => produto.rede.includes(p.id));
   const contagem = Object.fromEntries(
     Object.entries(ABA_TIPO).map(([a, t]) => [a, rede.filter((r) => r.tipo === t).length]),
   ) as Partial<Record<Aba, number>>;
+  contagem["Soluções adicionais"] = produto.solucoes.length;
 
   return (
     <>
@@ -86,9 +87,10 @@ function ProdutoDetalhe() {
             </div>
           </div>
           <p className="mt-3 text-sm leading-relaxed text-gray-600">{produto.descricao}</p>
-          <div className="mt-auto flex flex-wrap gap-2 pt-5">
+          <div className="mt-auto flex flex-wrap items-center gap-2 pt-5">
             <Chip>{tipoPessoa(produto.contratacao)} · {produto.contratacao}</Chip>
             <Chip>{produto.abrangencia}</Chip>
+            <RedeNacionalBadge produto={produto} grande />
             <Chip>{siglaSegmentacao(produto.segmentacao)}</Chip>
             <Chip>{produto.acomodacao}</Chip>
             <Chip>{produto.fatorModerador}</Chip>
@@ -103,6 +105,7 @@ function ProdutoDetalhe() {
           {aba === "Preço" && <AbaPreco produto={produto} />}
           {aba === "Perfil de Coparticipação" && <AbaCopart produto={produto} />}
           {ABA_TIPO[aba] && <AbaRede produto={produto} tipo={ABA_TIPO[aba]!} />}
+          {aba === "Soluções adicionais" && <AbaSolucoes produto={produto} />}
           {aba === "Mais…" && <AbaMais produto={produto} />}
         </div>
       </div>
@@ -122,7 +125,7 @@ function AbaPreco({ produto }: { produto: Produto }) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
               <th className="py-2">Faixa etária</th>
               <th className="py-2 text-right">Preço comercial</th>
               <th className="py-2 text-right">Nota Técnica (NTRP)</th>
@@ -161,47 +164,93 @@ function AbaCopart({ produto }: { produto: Produto }) {
   if (produto.fatorModerador === "Sem fator moderador" || produto.coparticipacao.length === 0)
     return <Vazio texto="Este produto não possui coparticipação ou franquia." />;
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b text-left text-xs uppercase tracking-wide text-gray-500">
-            <th className="py-2">Procedimento / evento</th>
-            <th className="py-2">Tipo</th>
-            <th className="py-2 text-right">Valor</th>
-            <th className="py-2 text-right">Limite por evento</th>
-          </tr>
-        </thead>
-        <tbody>
-          {produto.coparticipacao.map((c) => (
-            <tr key={c.id} className="border-b border-gray-100">
-              <td className="py-2 font-medium">{c.procedimento}</td>
-              <td className="py-2 text-gray-600">{c.tipo}</td>
-              <td className="py-2 text-right font-semibold text-brand-800">{c.tipo === "Percentual" ? `${c.valor}%` : brl(c.valor)}</td>
-              <td className="py-2 text-right text-gray-600">{c.limite ? brl(c.limite) : "—"}</td>
+    <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
+              <th className="py-2">Classificação</th>
+              <th className="py-2">Tipo</th>
+              <th className="py-2 text-right">Valor</th>
+              <th className="py-2 text-right">Limite da classificação</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <ListaRegras titulo="Mecanismos de regulação (CONSU 8/1998)" regras={validarCoparticipacao(produto.coparticipacao)} />
+          </thead>
+          <tbody>
+            {produto.coparticipacao.map((c) => (
+              <tr key={c.id} className="border-b border-gray-100">
+                <td className="py-2 font-medium">{c.procedimento}</td>
+                <td className="py-2 text-gray-600">{c.tipo}</td>
+                <td className="py-2 text-right font-semibold text-brand-800">{c.tipo === "Percentual" ? `${c.valor}%` : brl(c.valor)}</td>
+                <td className="py-2 text-right text-gray-600">{c.limite ? brl(c.limite) : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="rounded-xl border border-brand-200 bg-brand-50 p-5">
+        <div className="text-xs font-semibold uppercase tracking-wide text-brand-700">Limite global</div>
+        {produto.limiteGlobal ? (
+          <>
+            <div className="mt-1 text-2xl font-bold text-brand-900">{brl(produto.limiteGlobal.valor)}</div>
+            <div className="text-sm text-brand-700">por beneficiário · {produto.limiteGlobal.periodo.toLowerCase()}</div>
+            <p className="mt-3 text-xs text-gray-500">
+              Teto geral contabilizando todas as classificações. Atingido o limite global, não há cobrança de coparticipação no período,
+              mesmo que o limite de alguma classificação ainda não tenha sido alcançado.
+            </p>
+          </>
+        ) : (
+          <div className="mt-1 text-sm text-gray-500">Sem limite global definido.</div>
+        )}
+      </div>
     </div>
   );
 }
 
 function AbaRede({ produto, tipo }: { produto: Produto; tipo: TipoPrestador }) {
-  const lista = PRESTADORES.filter((p) => p.tipo === tipo && produto.rede.includes(p.id));
-  if (!lista.length) return <Vazio texto={`Nenhum prestador do tipo ${tipo.toLowerCase()} na rede deste produto.`} />;
+  const prestadores = useStore((s) => s.prestadores);
+  const lista = prestadores.filter((p) => p.tipo === tipo && produto.rede.includes(p.id));
+  return (
+    <>
+      <AvisoRedeNacional produto={produto} />
+      {produto.abrangencia === "Nacional" && (
+        <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Rede direta</div>
+      )}
+      {!lista.length ? (
+        <Vazio texto={`Nenhum prestador do tipo ${tipo.toLowerCase()} na rede direta deste produto.`} />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {lista.map((p) => (
+            <div key={p.id} className="flex items-start gap-3 rounded-xl border border-gray-200 p-4">
+              <MapPin size={18} className="mt-0.5 shrink-0 text-brand-600" />
+              <div>
+                <div className="flex items-center gap-1 font-semibold text-gray-900">
+                  {p.nome} {p.destaque && <Star size={14} className="fill-amber-400 text-amber-400" />}
+                </div>
+                <div className="text-xs text-gray-500">{p.bairro} · {p.cidade}/{p.uf}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function AbaSolucoes({ produto }: { produto: Produto }) {
+  const solucoes = useStore((s) => s.solucoes);
+  const permitidas = solucoes.filter((s) => produto.solucoes.includes(s.id));
+  if (!permitidas.length) return <Vazio texto="Este produto não permite a venda de soluções adicionais." />;
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {lista.map((p) => (
-        <div key={p.id} className="flex items-start gap-3 rounded-xl border border-gray-200 p-4">
-          <MapPin size={18} className="mt-0.5 shrink-0 text-brand-600" />
+      {permitidas.map((s) => (
+        <Link key={s.id} href="/solucoes/" className="flex gap-3 rounded-xl border border-gray-200 p-4 hover:border-brand-300">
+          <span className="h-10 w-1.5 shrink-0 rounded-full" style={{ background: s.cor }} />
           <div>
-            <div className="flex items-center gap-1 font-semibold text-gray-900">
-              {p.nome} {p.destaque && <Star size={14} className="fill-amber-400 text-amber-400" />}
-            </div>
-            <div className="text-xs text-gray-500">{p.municipio}/{p.uf}</div>
+            <div className="font-semibold text-gray-900">{s.nome}</div>
+            <div className="text-xs text-gray-500">{s.categoria} · {s.precoMensal ? `${brl(s.precoMensal)} ${s.cobranca.toLowerCase()}` : "sem custo adicional"}</div>
+            {!s.ativa && <Badge className="mt-1">Inativa</Badge>}
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );
@@ -217,7 +266,7 @@ function AbaMais({ produto }: { produto: Produto }) {
     ["Situação na ANS", produto.situacaoANS],
     ["Tipo de contratação", produto.contratacao],
     ["Segmentação assistencial", produto.segmentacao],
-    ["Abrangência geográfica", produto.abrangencia],
+    ["Abrangência geográfica", produto.abrangencia + (produto.redeNacional ? ` + Rede Nacional ${produto.redeNacional}` : "")],
     ["Padrão de acomodação", produto.acomodacao],
     ["Fator moderador", produto.fatorModerador],
     ["Formação de preço", produto.formacaoPreco],
@@ -242,8 +291,8 @@ function AbaMais({ produto }: { produto: Produto }) {
         </div>
         <h3 className="mb-2 mt-6 font-bold text-brand-900">Materiais ({materiais.length})</h3>
         <ul className="space-y-1 text-sm">
-          {materiais.slice(0, 5).map((m) => (
-            <li key={m.id} className="flex items-center gap-2 text-gray-700"><Download size={14} /> {m.titulo} <span className="text-xs text-gray-400">({m.formato})</span></li>
+          {materiais.slice(0, 6).map((m) => (
+            <li key={m.id} className="flex items-center gap-2 text-gray-700"><Download size={14} /> {m.titulo} <span className="text-xs text-gray-400">({m.categoria})</span></li>
           ))}
         </ul>
       </div>

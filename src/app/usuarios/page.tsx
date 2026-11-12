@@ -11,7 +11,7 @@ const PERFIS: Perfil[] = ["Administrador", "Gestor", "Colaborador", "Consulta"];
 const TOM: Record<Perfil, Tom> = { Administrador: "roxo", Gestor: "verde", Colaborador: "azul", Consulta: "cinza" };
 const DESCRICAO: Record<Perfil, string> = {
   Administrador: "Acesso total, inclusive configurações e criação de outros administradores.",
-  Gestor: "Cadastra produtos, modera o feed de notificações e inclui novos usuários.",
+  Gestor: "Cadastra produtos, gerencia a rede e as soluções adicionais, modera o feed e inclui novos usuários.",
   Colaborador: "Cadastra e edita produtos e materiais; alterações passam pela moderação.",
   Consulta: "Somente visualização do portfólio, comparativos, materiais e notificações.",
 };
@@ -19,6 +19,8 @@ const MATRIZ: [keyof (typeof PERMISSOES)["Gestor"], string][] = [
   ["editarProdutos", "Cadastrar/editar produtos"],
   ["enviarMateriais", "Enviar materiais"],
   ["moderar", "Moderar notificações"],
+  ["gerenciarRede", "Gestão de Rede (prestadores)"],
+  ["gerenciarSolucoes", "Cadastrar soluções adicionais"],
   ["gerenciarUsuarios", "Gerenciar usuários"],
   ["criarAdmin", "Criar administradores"],
   ["configurar", "Configurações do sistema"],

@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import {
-  Bell, Box, FolderOpen, GitCompare, Home, LayoutGrid, Menu, Settings, Users, X,
+  Bell, Box, FolderOpen, GitCompare, Home, LayoutGrid, Menu, Moon, Network, Puzzle, Settings, Sun, Users, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,12 +13,25 @@ import { Avatar } from "./ui";
 const NAV = [
   { href: "/", label: "Home", icon: Home },
   { href: "/portfolio/", label: "Portfólio", icon: LayoutGrid },
+  { href: "/solucoes/", label: "Soluções adicionais", icon: Puzzle },
   { href: "/comparativos/", label: "Comparativos", icon: GitCompare },
   { href: "/materiais/", label: "Materiais", icon: FolderOpen },
   { href: "/notificacoes/", label: "Notificações", icon: Bell },
+  { href: "/rede/", label: "Gestão de Rede", icon: Network, restrito: "gerenciarRede" as const },
   { href: "/usuarios/", label: "Usuários", icon: Users },
   { href: "/configuracoes/", label: "Configurações", icon: Settings },
 ];
+
+function useTema() {
+  const [escuro, setEscuro] = useState(() => document.documentElement.classList.contains("dark"));
+  const alternar = () => {
+    const novo = !escuro;
+    document.documentElement.classList.toggle("dark", novo);
+    try { localStorage.setItem("tema", novo ? "escuro" : "claro"); } catch {}
+    setEscuro(novo);
+  };
+  return { escuro, alternar };
+}
 
 export default function AppShell({ children }: { children: ReactNode }) {
   // Os dados ficam no localStorage: renderiza só no cliente para evitar divergência de hidratação.
@@ -36,7 +49,9 @@ function Shell({ children }: { children: ReactNode }) {
   const setUsuarioAtual = useStore((s) => s.setUsuarioAtual);
   const alteracoes = useStore((s) => s.alteracoes);
   const [menuAberto, setMenuAberto] = useState(false);
-  const podeModerar = PERMISSOES[usuario.perfil].moderar;
+  const perm = PERMISSOES[usuario.perfil];
+  const podeModerar = perm.moderar;
+  const { escuro, alternar } = useTema();
   const pendentes = alteracoes.filter((a) => a.status === "Pendente").length;
   const recentes = alteracoes.filter(
     (a) => a.status === "Publicada" && Date.now() - new Date(a.data).getTime() < 7 * 86400000,
@@ -51,7 +66,7 @@ function Shell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen">
       <aside
         className={clsx(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-brand-800 text-white transition-transform lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-y-auto bg-sidebar text-white transition-transform lg:translate-x-0",
           menuAberto ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -59,18 +74,26 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="rounded-xl bg-white/15 p-2"><Box size={26} /></div>
           <div>
             <div className="text-base font-bold leading-tight">Portal de Produtos</div>
-            <div className="text-xs text-brand-200">Aurora Saúde · protótipo</div>
+            <div className="text-xs text-white/60">Aurora Saúde · protótipo</div>
           </div>
           <button className="ml-auto lg:hidden" onClick={() => setMenuAberto(false)} aria-label="Fechar menu"><X /></button>
         </div>
+        <div className="px-6 pb-4">
+          <button
+            onClick={alternar}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 hover:bg-white/15"
+          >
+            {escuro ? <Sun size={14} /> : <Moon size={14} />} {escuro ? "Modo claro" : "Modo escuro"}
+          </button>
+        </div>
         <nav className="flex-1 space-y-1 px-3">
-          {NAV.map(({ href, label, icon: Icon }) => (
+          {NAV.filter((n) => !n.restrito || perm[n.restrito]).map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               className={clsx(
                 "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition",
-                ativo(href) ? "bg-white text-brand-800 shadow" : "text-brand-50 hover:bg-white/10",
+                ativo(href) ? "bg-surface text-brand-800 shadow" : "text-white/90 hover:bg-white/10",
               )}
             >
               <Icon size={18} />
@@ -91,7 +114,7 @@ function Shell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="border-t border-white/10 p-4">
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-brand-200">
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/60">
             Simular perfil (demo)
           </label>
           <select
@@ -109,7 +132,7 @@ function Shell({ children }: { children: ReactNode }) {
             <Avatar nome={usuario.nome} foto={usuario.foto} />
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold">{usuario.nome}</div>
-              <div className="truncate text-xs text-brand-200">{usuario.email}</div>
+              <div className="truncate text-xs text-white/60">{usuario.email}</div>
             </div>
           </Link>
         </div>
@@ -118,11 +141,11 @@ function Shell({ children }: { children: ReactNode }) {
       {menuAberto && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setMenuAberto(false)} />}
 
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-gray-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-gray-200 bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
           <button onClick={() => setMenuAberto(true)} aria-label="Abrir menu"><Menu /></button>
           <span className="font-bold text-brand-800">Portal de Produtos</span>
         </header>
-        <div className="bg-amber-50 px-6 py-1.5 text-center text-xs text-amber-800">
+        <div className="bg-amber-50 px-6 py-1.5 text-center text-xs text-amber-800 dark:bg-amber-100">
           Protótipo para apresentação · todos os dados são fictícios · alterações ficam salvas apenas neste navegador
         </div>
         <main className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">{children}</main>

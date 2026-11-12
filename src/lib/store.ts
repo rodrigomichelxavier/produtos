@@ -2,39 +2,44 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { ALTERACOES, CONFIG_INICIAL, MATERIAIS, PRESTADORES, PRODUTOS, USUARIOS } from "@/data/seed";
+import {
+  ALTERACOES, CONFIG_INICIAL, MATERIAIS, PRESTADORES, PRODUTOS, REDES_NACIONAIS, SOLUCOES, USUARIOS,
+} from "@/data/seed";
 import { brl } from "./ans";
 import type {
-  Alteracao,
-  Configuracoes,
-  Material,
-  Perfil,
-  Produto,
-  TipoAlteracao,
-  Usuario,
+  Alteracao, Configuracoes, InfoRedeNacional, ItemCoparticipacao, Material, Perfil, Prestador, Produto,
+  SolucaoAdicional, TipoAlteracao, Usuario,
 } from "./types";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const now = () => new Date().toISOString();
 
-/** Matriz de permissões por perfil. */
-export const PERMISSOES: Record<Perfil, {
+type Permissoes = {
   editarProdutos: boolean;
   moderar: boolean;
+  gerenciarRede: boolean;
+  gerenciarSolucoes: boolean;
   gerenciarUsuarios: boolean;
   criarAdmin: boolean;
   configurar: boolean;
   enviarMateriais: boolean;
-}> = {
-  Administrador: { editarProdutos: true, moderar: true, gerenciarUsuarios: true, criarAdmin: true, configurar: true, enviarMateriais: true },
-  Gestor: { editarProdutos: true, moderar: true, gerenciarUsuarios: true, criarAdmin: false, configurar: false, enviarMateriais: true },
-  Colaborador: { editarProdutos: true, moderar: false, gerenciarUsuarios: false, criarAdmin: false, configurar: false, enviarMateriais: true },
-  Consulta: { editarProdutos: false, moderar: false, gerenciarUsuarios: false, criarAdmin: false, configurar: false, enviarMateriais: false },
 };
 
+/** Matriz de permissões por perfil. */
+export const PERMISSOES: Record<Perfil, Permissoes> = {
+  Administrador: { editarProdutos: true, moderar: true, gerenciarRede: true, gerenciarSolucoes: true, gerenciarUsuarios: true, criarAdmin: true, configurar: true, enviarMateriais: true },
+  Gestor: { editarProdutos: true, moderar: true, gerenciarRede: true, gerenciarSolucoes: true, gerenciarUsuarios: true, criarAdmin: false, configurar: false, enviarMateriais: true },
+  Colaborador: { editarProdutos: true, moderar: false, gerenciarRede: false, gerenciarSolucoes: false, gerenciarUsuarios: false, criarAdmin: false, configurar: false, enviarMateriais: true },
+  Consulta: { editarProdutos: false, moderar: false, gerenciarRede: false, gerenciarSolucoes: false, gerenciarUsuarios: false, criarAdmin: false, configurar: false, enviarMateriais: false },
+};
+
+export const nomePrestador = (p?: Prestador) => (p ? `${p.nome} (${p.bairro} · ${p.cidade}/${p.uf})` : "Prestador removido");
+
+type Evento = { tipo: TipoAlteracao; titulo: string; detalhes: string[] };
+
 /** Compara duas versões do produto e gera os eventos do feed de notificações. */
-function diffProduto(antes: Produto, depois: Produto): { tipo: TipoAlteracao; titulo: string; detalhes: string[] }[] {
-  const out: { tipo: TipoAlteracao; titulo: string; detalhes: string[] }[] = [];
+function diffProduto(antes: Produto, depois: Produto, prestadores: Prestador[], solucoes: SolucaoAdicional[]): Evento[] {
+  const out: Evento[] = [];
 
   const precoDet: string[] = [];
   depois.precoComercial.forEach((v, i) => {
@@ -45,45 +50,44 @@ function diffProduto(antes: Produto, depois: Produto): { tipo: TipoAlteracao; ti
   });
   if (precoDet.length) out.push({ tipo: "Preço", titulo: "Alteração de preço", detalhes: precoDet });
 
-  const nome = (id: string) => {
-    const p = PRESTADORES.find((x) => x.id === id);
-    return p ? `${p.nome} (${p.municipio}/${p.uf})` : id;
-  };
+  const nome = (id: string) => nomePrestador(prestadores.find((x) => x.id === id));
   const inc = depois.rede.filter((r) => !antes.rede.includes(r));
   const exc = antes.rede.filter((r) => !depois.rede.includes(r));
-  if (inc.length || exc.length)
-    out.push({
-      tipo: "Rede",
-      titulo: "Alteração na rede credenciada",
-      detalhes: [...inc.map((r) => `Incluído: ${nome(r)}`), ...exc.map((r) => `Excluído: ${nome(r)}`)],
-    });
+  const redeDet = [...inc.map((r) => `Incluído: ${nome(r)}`), ...exc.map((r) => `Excluído: ${nome(r)}`)];
+  if (antes.redeNacional !== depois.redeNacional)
+    redeDet.unshift(`Rede nacional: ${antes.redeNacional ?? "—"} → ${depois.redeNacional ?? "—"}`);
+  if (redeDet.length) out.push({ tipo: "Rede", titulo: "Alteração na rede credenciada", detalhes: redeDet });
 
   const statusDet: string[] = [];
   if (antes.statusComercial !== depois.statusComercial)
     statusDet.push(`Status comercial: ${antes.statusComercial} → ${depois.statusComercial}`);
-  if (antes.situacaoANS !== depois.situacaoANS)
-    statusDet.push(`Situação ANS: ${antes.situacaoANS} → ${depois.situacaoANS}`);
+  if (antes.situacaoANS !== depois.situacaoANS) statusDet.push(`Situação ANS: ${antes.situacaoANS} → ${depois.situacaoANS}`);
   if (statusDet.length) out.push({ tipo: "Status", titulo: "Mudança de status", detalhes: statusDet });
 
-  if (
-    antes.fatorModerador !== depois.fatorModerador ||
-    JSON.stringify(antes.coparticipacao) !== JSON.stringify(depois.coparticipacao)
-  ) {
-    const det: string[] = [];
-    if (antes.fatorModerador !== depois.fatorModerador)
-      det.push(`Fator moderador: ${antes.fatorModerador} → ${depois.fatorModerador}`);
-    depois.coparticipacao.forEach((c) => {
-      const old = antes.coparticipacao.find((o) => o.procedimento === c.procedimento);
-      const fmt = (x: typeof c) => (x.tipo === "Percentual" ? `${x.valor}%` : brl(x.valor));
-      if (!old) det.push(`Incluído: ${c.procedimento} (${fmt(c)})`);
-      else if (old.valor !== c.valor || old.tipo !== c.tipo || old.limite !== c.limite)
-        det.push(`${c.procedimento}: ${fmt(old)} → ${fmt(c)}`);
-    });
-    antes.coparticipacao
-      .filter((o) => !depois.coparticipacao.some((c) => c.procedimento === o.procedimento))
-      .forEach((o) => det.push(`Excluído: ${o.procedimento}`));
-    out.push({ tipo: "Coparticipação", titulo: "Alteração no perfil de coparticipação", detalhes: det.length ? det : ["Ajustes no perfil"] });
+  const fmt = (x: ItemCoparticipacao) => (x.tipo === "Percentual" ? `${x.valor}%` : brl(x.valor));
+  const copDet: string[] = [];
+  if (antes.fatorModerador !== depois.fatorModerador) copDet.push(`Fator moderador: ${antes.fatorModerador} → ${depois.fatorModerador}`);
+  depois.coparticipacao.forEach((c) => {
+    const old = antes.coparticipacao.find((o) => o.procedimento === c.procedimento);
+    if (!old) copDet.push(`Incluído: ${c.procedimento} (${fmt(c)})`);
+    else if (old.valor !== c.valor || old.tipo !== c.tipo) copDet.push(`${c.procedimento}: ${fmt(old)} → ${fmt(c)}`);
+    else if (old.limite !== c.limite) copDet.push(`Limite ${c.procedimento}: ${brl(old.limite ?? 0)} → ${brl(c.limite ?? 0)}`);
+  });
+  antes.coparticipacao
+    .filter((o) => !depois.coparticipacao.some((c) => c.procedimento === o.procedimento))
+    .forEach((o) => copDet.push(`Excluído: ${o.procedimento}`));
+  if (JSON.stringify(antes.limiteGlobal) !== JSON.stringify(depois.limiteGlobal)) {
+    const lg = (l?: Produto["limiteGlobal"]) => (l ? `${brl(l.valor)} (${l.periodo.toLowerCase()})` : "sem limite");
+    copDet.push(`Limite global: ${lg(antes.limiteGlobal)} → ${lg(depois.limiteGlobal)}`);
   }
+  if (copDet.length) out.push({ tipo: "Coparticipação", titulo: "Alteração no perfil de coparticipação", detalhes: copDet });
+
+  const nomeSol = (id: string) => solucoes.find((s) => s.id === id)?.nome ?? id;
+  const solDet = [
+    ...depois.solucoes.filter((s) => !antes.solucoes.includes(s)).map((s) => `Permitido: ${nomeSol(s)}`),
+    ...antes.solucoes.filter((s) => !depois.solucoes.includes(s)).map((s) => `Removido: ${nomeSol(s)}`),
+  ];
+  if (solDet.length) out.push({ tipo: "Soluções adicionais", titulo: "Alteração nas soluções adicionais", detalhes: solDet });
 
   const campos: [keyof Produto, string][] = [
     ["nome", "Nome"],
@@ -106,6 +110,9 @@ function diffProduto(antes: Produto, depois: Produto): { tipo: TipoAlteracao; ti
 
 interface State {
   produtos: Produto[];
+  prestadores: Prestador[];
+  redesNacionais: InfoRedeNacional[];
+  solucoes: SolucaoAdicional[];
   usuarios: Usuario[];
   materiais: Material[];
   alteracoes: Alteracao[];
@@ -116,6 +123,11 @@ interface State {
   salvarProduto: (p: Produto) => string;
   excluirProduto: (id: string) => void;
   moderar: (ids: string[], status: "Publicada" | "Descartada", motivo?: string) => void;
+  salvarPrestador: (p: Prestador) => void;
+  excluirPrestador: (id: string) => void;
+  salvarRedesNacionais: (r: InfoRedeNacional[]) => void;
+  salvarSolucao: (s: SolucaoAdicional, produtoIds: string[]) => void;
+  excluirSolucao: (id: string) => void;
   salvarUsuario: (u: Usuario) => void;
   adicionarMaterial: (m: Omit<Material, "id" | "versao" | "atualizadoEm">) => void;
   removerMaterial: (id: string) => void;
@@ -125,6 +137,9 @@ interface State {
 
 const inicial = () => ({
   produtos: PRODUTOS,
+  prestadores: PRESTADORES,
+  redesNacionais: REDES_NACIONAIS,
+  solucoes: SOLUCOES,
   usuarios: USUARIOS,
   materiais: MATERIAIS,
   alteracoes: ALTERACOES,
@@ -134,90 +149,130 @@ const inicial = () => ({
 
 export const useStore = create<State>()(
   persist(
-    (set, get) => ({
-      ...inicial(),
+    (set, get) => {
+      const statusInicial = () => (get().config.exigirModeracao ? "Pendente" : "Publicada") as Alteracao["status"];
 
-      setUsuarioAtual: (id) => set({ usuarioAtualId: id }),
-
-      salvarProduto: (p) => {
-        const { produtos, usuarioAtualId, config } = get();
-        const statusInicial = config.exigirModeracao ? "Pendente" : "Publicada";
+      /** Grava uma nova versão do produto e registra os eventos no feed. */
+      const gravar = (p: Produto): string => {
+        const { produtos, usuarioAtualId, prestadores, solucoes } = get();
         const existente = produtos.find((x) => x.id === p.id);
-        const atualizado = { ...p, atualizadoEm: now() };
-        let novos: Alteracao[] = [];
+        const atualizado: Produto = { ...p, atualizadoEm: now() };
+        if (atualizado.abrangencia !== "Nacional") delete atualizado.redeNacional;
+        let eventos: Evento[];
         if (!existente) {
           atualizado.id = p.id || `p${uid()}`;
-          novos = [{
-            id: uid(), produtoId: atualizado.id, tipo: "Novo produto",
+          eventos = [{
+            tipo: "Novo produto",
             titulo: `Produto cadastrado: ${atualizado.nome}`,
-            detalhes: [`${atualizado.contratacao} · ${atualizado.segmentacao} · ${atualizado.abrangencia}`],
-            autorId: usuarioAtualId, data: now(), status: statusInicial,
+            detalhes: [`${atualizado.contratacao} · ${atualizado.segmentacao} · ${atualizado.abrangencia}${atualizado.redeNacional ? ` + Rede Nacional ${atualizado.redeNacional}` : ""}`],
           }];
           set({ produtos: [atualizado, ...produtos] });
         } else {
-          novos = diffProduto(existente, atualizado).map((d) => ({
-            id: uid(), produtoId: p.id, ...d, autorId: usuarioAtualId, data: now(), status: statusInicial,
-          }));
+          eventos = diffProduto(existente, atualizado, prestadores, solucoes);
           set({ produtos: produtos.map((x) => (x.id === p.id ? atualizado : x)) });
         }
+        const novos = eventos.map((e) => ({
+          id: uid(), produtoId: atualizado.id, ...e, autorId: usuarioAtualId, data: now(), status: statusInicial(),
+        }));
         set((s) => ({ alteracoes: [...novos, ...s.alteracoes] }));
         return atualizado.id;
-      },
+      };
 
-      excluirProduto: (id) =>
-        set((s) => ({
-          produtos: s.produtos.filter((p) => p.id !== id),
-          materiais: s.materiais.filter((m) => m.produtoId !== id),
-          alteracoes: s.alteracoes.filter((a) => a.produtoId !== id),
-        })),
+      return {
+        ...inicial(),
 
-      moderar: (ids, status, motivo) =>
-        set((s) => ({
-          alteracoes: s.alteracoes.map((a) =>
-            ids.includes(a.id) ? { ...a, status, motivo, moderadorId: s.usuarioAtualId } : a,
-          ),
-        })),
+        setUsuarioAtual: (id) => set({ usuarioAtualId: id }),
 
-      salvarUsuario: (u) =>
-        set((s) => ({
-          usuarios: s.usuarios.some((x) => x.id === u.id)
-            ? s.usuarios.map((x) => (x.id === u.id ? u : x))
-            : [...s.usuarios, { ...u, id: u.id || `u${uid()}`, criadoEm: now() }],
-        })),
+        salvarProduto: gravar,
 
-      adicionarMaterial: (m) => {
-        const { materiais, usuarioAtualId, config } = get();
-        const anterior = materiais.find(
-          (x) => x.produtoId === m.produtoId && x.categoria === m.categoria && x.titulo === m.titulo,
-        );
-        const novo: Material = {
-          ...m,
-          id: uid(),
-          versao: anterior ? anterior.versao + 1 : 1,
-          atualizadoEm: now(),
-        };
-        set({
-          materiais: [novo, ...materiais.filter((x) => x !== anterior)],
-          alteracoes: [
-            {
-              id: uid(), produtoId: m.produtoId, tipo: "Material",
-              titulo: anterior ? "Material de comunicação atualizado" : "Novo material de comunicação",
-              detalhes: [`${m.categoria}: ${m.titulo} (v${novo.versao}, ${m.formato})`],
-              autorId: usuarioAtualId, data: now(),
-              status: config.exigirModeracao ? "Pendente" : "Publicada",
-            },
-            ...get().alteracoes,
-          ],
-        });
-      },
+        excluirProduto: (id) =>
+          set((s) => ({
+            produtos: s.produtos.filter((p) => p.id !== id),
+            materiais: s.materiais.filter((m) => m.produtoId !== id),
+            alteracoes: s.alteracoes.filter((a) => a.produtoId !== id),
+          })),
 
-      removerMaterial: (id) => set((s) => ({ materiais: s.materiais.filter((m) => m.id !== id) })),
+        moderar: (ids, status, motivo) =>
+          set((s) => ({
+            alteracoes: s.alteracoes.map((a) =>
+              ids.includes(a.id) ? { ...a, status, motivo, moderadorId: s.usuarioAtualId } : a,
+            ),
+          })),
 
-      salvarConfig: (c) => set({ config: c }),
+        salvarPrestador: (p) =>
+          set((s) => ({
+            prestadores: s.prestadores.some((x) => x.id === p.id)
+              ? s.prestadores.map((x) => (x.id === p.id ? p : x))
+              : [...s.prestadores, { ...p, id: p.id || `pr${uid()}` }],
+          })),
 
-      resetar: () => set(inicial()),
-    }),
-    { name: "portal-produtos-demo", version: 1 },
+        excluirPrestador: (id) => set((s) => ({ prestadores: s.prestadores.filter((p) => p.id !== id) })),
+
+        salvarRedesNacionais: (r) => set({ redesNacionais: r }),
+
+        salvarSolucao: (sol, produtoIds) => {
+          const s = get();
+          const nova = { ...sol, id: sol.id || `s${uid()}` };
+          set({
+            solucoes: s.solucoes.some((x) => x.id === nova.id)
+              ? s.solucoes.map((x) => (x.id === nova.id ? nova : x))
+              : [...s.solucoes, nova],
+          });
+          // Atualiza a permissão nos produtos afetados (gera eventos no feed).
+          get().produtos.forEach((p) => {
+            const tem = p.solucoes.includes(nova.id);
+            const deve = produtoIds.includes(p.id);
+            if (tem !== deve)
+              gravar({ ...p, solucoes: deve ? [...p.solucoes, nova.id] : p.solucoes.filter((x) => x !== nova.id) });
+          });
+        },
+
+        excluirSolucao: (id) =>
+          set((s) => ({
+            solucoes: s.solucoes.filter((x) => x.id !== id),
+            produtos: s.produtos.map((p) => ({ ...p, solucoes: p.solucoes.filter((x) => x !== id) })),
+          })),
+
+        salvarUsuario: (u) =>
+          set((s) => ({
+            usuarios: s.usuarios.some((x) => x.id === u.id)
+              ? s.usuarios.map((x) => (x.id === u.id ? u : x))
+              : [...s.usuarios, { ...u, id: u.id || `u${uid()}`, criadoEm: now() }],
+          })),
+
+        adicionarMaterial: (m) => {
+          const { materiais, usuarioAtualId } = get();
+          const anterior = materiais.find(
+            (x) => x.produtoId === m.produtoId && x.categoria === m.categoria && x.titulo === m.titulo,
+          );
+          const novo: Material = { ...m, id: uid(), versao: anterior ? anterior.versao + 1 : 1, atualizadoEm: now() };
+          set({
+            materiais: [novo, ...materiais.filter((x) => x !== anterior)],
+            alteracoes: [
+              {
+                id: uid(), produtoId: m.produtoId, tipo: "Material",
+                titulo: anterior ? "Material de comunicação atualizado" : "Novo material de comunicação",
+                detalhes: [`${m.categoria}: ${m.titulo} (v${novo.versao}, ${m.formato})`],
+                autorId: usuarioAtualId, data: now(), status: statusInicial(),
+              },
+              ...get().alteracoes,
+            ],
+          });
+        },
+
+        removerMaterial: (id) => set((s) => ({ materiais: s.materiais.filter((m) => m.id !== id) })),
+
+        salvarConfig: (c) => set({ config: c }),
+
+        resetar: () => set(inicial()),
+      };
+    },
+    {
+      name: "portal-produtos-demo",
+      version: 2,
+      // Dados de versões anteriores do protótipo são descartados.
+      migrate: () => inicial() as unknown as State,
+    },
   ),
 );
 

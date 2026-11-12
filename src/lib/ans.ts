@@ -1,4 +1,4 @@
-import type { ItemCoparticipacao, Produto } from "./types";
+import type { Produto } from "./types";
 
 export interface Regra {
   ok: boolean;
@@ -66,64 +66,15 @@ export function desvioNTRP(produto: Pick<Produto, "precoComercial" | "precoNTRP"
   });
 }
 
-/**
- * Regras de mecanismos de regulação (coparticipação/franquia) — Resolução CONSU nº 8/1998:
- * não pode caracterizar financiamento integral do procedimento pelo beneficiário e,
- * em internações, não pode ser cobrada em percentual (exceto saúde mental após 30 dias).
- */
-export function validarCoparticipacao(itens: ItemCoparticipacao[]): Regra[] {
-  const pctInternacao = itens.filter(
-    (i) =>
-      i.tipo === "Percentual" &&
-      /interna/i.test(i.procedimento) &&
-      !/sa[uú]de mental|psiqui/i.test(i.procedimento),
-  );
-  const integral = itens.filter((i) => i.tipo === "Percentual" && i.valor >= 100);
-  const semTeto = itens.filter((i) => i.tipo === "Percentual" && !i.limite);
-  return [
-    {
-      ok: integral.length === 0,
-      titulo: "Não caracteriza financiamento integral",
-      detalhe:
-        integral.length === 0
-          ? "Nenhum item com coparticipação de 100% ou mais."
-          : `Itens com 100%: ${integral.map((i) => i.procedimento).join(", ")}.`,
-      base: "CONSU 8/1998, art. 2º, VII",
-    },
-    {
-      ok: pctInternacao.length === 0,
-      titulo: "Internação sem coparticipação percentual",
-      detalhe:
-        pctInternacao.length === 0
-          ? "Internações com valor fixo (ou sem coparticipação)."
-          : `Ajustar para valor fixo: ${pctInternacao.map((i) => i.procedimento).join(", ")}.`,
-      base: "CONSU 8/1998, art. 2º, VIII",
-    },
-    {
-      ok: semTeto.length === 0,
-      titulo: "Itens percentuais com limite por evento",
-      detalhe:
-        semTeto.length === 0
-          ? "Todos os itens percentuais possuem teto."
-          : `Boa prática: definir teto para ${semTeto.map((i) => i.procedimento).join(", ")}.`,
-      base: "Boa prática / transparência ao beneficiário",
-    },
-  ];
-}
-
 export function tipoPessoa(c: Produto["contratacao"]): "PF" | "PJ" {
   return c === "Individual/Familiar" ? "PF" : "PJ";
 }
 
 export function siglaSegmentacao(s: Produto["segmentacao"]): string {
   const map: Record<Produto["segmentacao"], string> = {
-    Ambulatorial: "Amb",
-    "Hospitalar com Obstetrícia": "Hosp + Obs",
-    "Hospitalar sem Obstetrícia": "Hosp",
     "Ambulatorial + Hospitalar com Obstetrícia": "Amb + Hosp + Obs",
-    "Ambulatorial + Hospitalar sem Obstetrícia": "Amb + Hosp",
+    Hospitalar: "Hospitalar",
     Referência: "Referência",
-    Odontológico: "Odonto",
   };
   return map[s];
 }
@@ -149,7 +100,7 @@ export function dataBR(iso: string, comHora = false): string {
 export const NORMATIVOS = [
   { sigla: "Lei 9.656/1998", tema: "Lei dos Planos de Saúde — segmentações, coberturas e registro de produtos" },
   { sigla: "RN 63/2003", tema: "Faixas etárias e limites de variação de preço" },
-  { sigla: "CONSU 8/1998", tema: "Mecanismos de regulação: coparticipação e franquia" },
+  { sigla: "CONSU 8/1998", tema: "Mecanismos de regulação: coparticipação e franquia (referência; sem validação automática no portal)" },
   { sigla: "RN 465/2021", tema: "Rol de Procedimentos e Eventos em Saúde (cobertura mínima)" },
   { sigla: "RN 557/2022", tema: "Contratação de planos coletivos empresariais e por adesão" },
   { sigla: "RN 438/2018", tema: "Portabilidade de carências" },

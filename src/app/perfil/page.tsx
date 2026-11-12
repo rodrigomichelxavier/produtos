@@ -39,7 +39,7 @@ export default function PerfilPage() {
           <div className="relative">
             <Avatar nome={u.nome} foto={u.foto} tamanho={120} />
             <button
-              className="absolute bottom-0 right-0 rounded-full bg-brand-600 p-2 text-white shadow hover:bg-brand-700"
+              className="absolute bottom-0 right-0 rounded-full bg-accent p-2 text-white shadow hover:bg-accent-hover"
               onClick={() => ref.current?.click()}
               aria-label="Trocar foto"
             >

@@ -8,6 +8,22 @@ description: Conhecimento de domínio do mercado de saúde suplementar brasileir
 Use esta referência ao modelar dados, validar regras e escrever textos da interface.
 Os dados do protótipo são **fictícios**; nunca use nomes reais de operadoras, hospitais ou beneficiários.
 
+## Decisões de negócio do protótipo (definidas pelo usuário)
+
+- Área de atuação regional = 13 municípios da Região Metropolitana de Campinas: Campinas, Artur Nogueira, Cosmópolis,
+  Holambra, Hortolândia, Indaiatuba, Jaguariúna, Monte Mor, Paulínia, Santo Antônio de Posse, Sumaré, Valinhos e Vinhedo.
+  **Nunca citar o nome de operadora real** associada a essa região.
+- Segmentações usadas: Ambulatorial + Hospitalar com Obstetrícia · Hospitalar · Referência.
+- Abrangências usadas: Grupo de Municípios · Nacional.
+- Rede: produto de Grupo de Municípios usa **somente a rede direta** (prestadores especificados). Produto Nacional usa
+  **rede direta + rede nacional referenciada** de nível Básica, Especial ou Master — exibir como "+ Rede Nacional X".
+- Prestadores têm tipo, cidade/UF, bairro e CNES; são cadastrados em Gestão de Rede (Administrador e Gestor).
+- Coparticipação: **não aplicar validador automático de regras ANS**. Cada classificação tem seu limite e o produto pode
+  ter um **limite global** (mensal ou anual) somando todas as classificações.
+- Soluções adicionais (ex.: Cobertura Aeromédica, TotalPass, Clube de Desconto, Seguro Viagem, Cobertura Pet) são
+  cadastradas à parte; cada produto define quais permite.
+- Materiais: apenas "Uso interno" e "Uso externo"; o tipo (lâmina, tabela etc.) fica no título dado pelo analista.
+
 ## Conceitos do produto (plano de saúde)
 
 Cada produto é registrado na ANS e recebe um **nº de registro de produto** (9 dígitos).
@@ -16,8 +32,8 @@ A operadora tem um **registro ANS de operadora** (6 dígitos). Características 
 | Campo | Valores |
 |---|---|
 | Tipo de contratação | Individual/Familiar (PF) · Coletivo Empresarial (PJ) · Coletivo por Adesão (PJ) |
-| Segmentação assistencial | Ambulatorial · Hospitalar com/sem Obstetrícia · Ambulatorial + Hospitalar com/sem Obstetrícia · Referência · Odontológico |
-| Abrangência geográfica | Nacional · Grupo de Estados · Estadual · Grupo de Municípios · Municipal |
+| Segmentação assistencial | Na ANS: Ambulatorial · Hospitalar com/sem Obstetrícia · Amb + Hosp · Referência · Odontológico (o portal usa um subconjunto, ver acima) |
+| Abrangência geográfica | Na ANS: Nacional · Grupo de Estados · Estadual · Grupo de Municípios · Municipal (o portal usa Nacional e Grupo de Municípios) |
 | Área de atuação | Lista de municípios/UFs coerente com a abrangência |
 | Padrão de acomodação | Coletiva (enfermaria) · Individual (apartamento). Não se aplica a planos ambulatoriais/odontológicos |
 | Fator moderador | Sem · Coparticipação · Franquia |
@@ -46,7 +62,7 @@ Reajuste: planos individuais/familiares têm reajuste anual limitado ao índice 
 - Em **internação**, não pode ser cobrada em percentual (exceção: saúde mental, conforme regras específicas) — usar valor fixo.
 - Boa prática: informar limite (teto) por evento.
 
-Implementação: `src/lib/ans.ts → validarCoparticipacao`.
+No portal essas regras são apenas referência: não há validação automática da coparticipação (decisão de negócio).
 
 ## Rede credenciada
 

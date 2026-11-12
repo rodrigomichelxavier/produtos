@@ -7,7 +7,7 @@ import { Modal, PageHeader, Tabs, Vazio } from "@/components/ui";
 import { usePermissoes, useStore } from "@/lib/store";
 import type { TipoAlteracao } from "@/lib/types";
 
-const TIPOS: ("Todos" | TipoAlteracao)[] = ["Todos", "Preço", "Rede", "Status", "Coparticipação", "Material", "Cadastro", "Novo produto"];
+const TIPOS: ("Todos" | TipoAlteracao)[] = ["Todos", "Preço", "Rede", "Status", "Coparticipação", "Material", "Soluções adicionais", "Cadastro", "Novo produto"];
 
 function grupoData(iso: string) {
   const d = new Date(iso);
@@ -73,7 +73,7 @@ function Feed() {
           <button
             key={t}
             onClick={() => setTipo(t)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${tipo === t ? "bg-brand-700 text-white ring-brand-700" : "bg-white text-gray-600 ring-gray-300 hover:bg-gray-50"}`}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${tipo === t ? "bg-accent text-white ring-accent" : "bg-surface text-gray-600 ring-gray-300 hover:bg-gray-50"}`}
           >
             {t}
           </button>

@@ -4,31 +4,30 @@ import { ArrowLeft, Info, Plus, Save, Trash2, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { NIVEL_COR } from "@/components/produto";
 import { ListaRegras } from "@/components/regras";
 import { PageHeader, Vazio } from "@/components/ui";
-import { PRESTADORES } from "@/data/seed";
-import { validarCoparticipacao, validarFaixasRN63 } from "@/lib/ans";
+import { MUNICIPIOS_REGIAO } from "@/data/seed";
+import { brl, validarFaixasRN63 } from "@/lib/ans";
 import { usePermissoes, useStore } from "@/lib/store";
 import {
-  FAIXAS_ETARIAS, type Abrangencia, type Acomodacao, type FatorModerador, type FormacaoPreco, type ItemCoparticipacao,
-  type Produto, type Segmentacao, type SituacaoANS, type StatusComercial, type TipoContratacao, type TipoPrestador,
+  FAIXAS_ETARIAS, TIPOS_PRESTADOR, type Abrangencia, type Acomodacao, type FatorModerador, type FormacaoPreco,
+  type ItemCoparticipacao, type Produto, type RedeNacional, type Segmentacao, type SituacaoANS, type StatusComercial,
+  type TipoContratacao,
 } from "@/lib/types";
 
 const OPC = {
   contratacao: ["Individual/Familiar", "Coletivo Empresarial", "Coletivo por Adesão"] as TipoContratacao[],
-  segmentacao: [
-    "Ambulatorial", "Hospitalar com Obstetrícia", "Hospitalar sem Obstetrícia", "Ambulatorial + Hospitalar com Obstetrícia",
-    "Ambulatorial + Hospitalar sem Obstetrícia", "Referência", "Odontológico",
-  ] as Segmentacao[],
-  abrangencia: ["Nacional", "Grupo de Estados", "Estadual", "Grupo de Municípios", "Municipal"] as Abrangencia[],
-  acomodacao: ["Enfermaria (coletiva)", "Apartamento (individual)", "Não se aplica"] as Acomodacao[],
+  segmentacao: ["Ambulatorial + Hospitalar com Obstetrícia", "Hospitalar", "Referência"] as Segmentacao[],
+  abrangencia: ["Grupo de Municípios", "Nacional"] as Abrangencia[],
+  redeNacional: ["Básica", "Especial", "Master"] as RedeNacional[],
+  acomodacao: ["Enfermaria (coletiva)", "Apartamento (individual)"] as Acomodacao[],
   fator: ["Sem fator moderador", "Coparticipação", "Franquia"] as FatorModerador[],
   formacao: ["Pré-estabelecido", "Pós-estabelecido", "Misto"] as FormacaoPreco[],
   situacao: ["Ativo", "Ativo com comercialização suspensa", "Cancelado"] as SituacaoANS[],
   status: ["Em elaboração", "Em comercialização", "Fora de comercialização"] as StatusComercial[],
 };
 const FATORES_PADRAO = [1, 1.2, 1.38, 1.55, 1.72, 1.95, 2.5, 3.25, 4.2, 5.9];
-const TIPOS: TipoPrestador[] = ["Hospital", "Laboratório", "Imagem", "Clínica"];
 
 const novoProduto = (): Produto => ({
   id: "",
@@ -38,7 +37,7 @@ const novoProduto = (): Produto => ({
   contratacao: "Individual/Familiar",
   segmentacao: "Ambulatorial + Hospitalar com Obstetrícia",
   abrangencia: "Grupo de Municípios",
-  areaAtuacao: [],
+  areaAtuacao: [...MUNICIPIOS_REGIAO],
   acomodacao: "Enfermaria (coletiva)",
   fatorModerador: "Sem fator moderador",
   formacaoPreco: "Pré-estabelecido",
@@ -48,6 +47,7 @@ const novoProduto = (): Produto => ({
   precoNTRP: FATORES_PADRAO.map((f) => Math.round(195 * f * 100) / 100),
   coparticipacao: [],
   rede: [],
+  solucoes: [],
   cor: "#2e7d32",
   atualizadoEm: new Date().toISOString(),
 });
@@ -68,19 +68,23 @@ function Editor() {
 function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
   const [p, setP] = useState<Produto>(inicial);
   const [reajuste, setReajuste] = useState(0);
+  const [soArea, setSoArea] = useState(true);
+  const prestadores = useStore((s) => s.prestadores);
+  const solucoes = useStore((s) => s.solucoes);
   const salvar = useStore((s) => s.salvarProduto);
   const moderacao = useStore((s) => s.config.exigirModeracao);
   const router = useRouter();
   const set = <K extends keyof Produto>(k: K, v: Produto[K]) => setP((x) => ({ ...x, [k]: v }));
 
   const regrasPreco = validarFaixasRN63(p.precoComercial);
-  const regrasCopart = validarCoparticipacao(p.coparticipacao);
   const regDigitos = p.registroANS.replace(/\D/g, "");
   const erros = [
     !p.nome.trim() && "Informe o nome comercial do produto.",
     regDigitos.length !== 9 && "O nº de registro ANS do produto deve ter 9 dígitos.",
     !regrasPreco.every((r) => r.ok) && "A tabela de preços não atende à RN 63/2003.",
-    p.segmentacao === "Ambulatorial" && p.acomodacao !== "Não se aplica" && "Segmentação ambulatorial não possui padrão de acomodação.",
+    p.abrangencia === "Nacional" && !p.redeNacional && "Produto nacional precisa da rede nacional referenciada (Básica, Especial ou Master).",
+    p.abrangencia === "Grupo de Municípios" && p.areaAtuacao.length === 0 && "Selecione ao menos um município da área de atuação.",
+    p.abrangencia === "Grupo de Municípios" && p.rede.length === 0 && "Produto de grupo de municípios precisa ter os prestadores da rede direta especificados.",
   ].filter(Boolean) as string[];
 
   const onSalvar = () => {
@@ -137,15 +141,71 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
         <div className="grid gap-4 md:grid-cols-3">
           <Sel label="Tipo de contratação" valor={p.contratacao} opcoes={OPC.contratacao} onChange={(v) => set("contratacao", v)} />
           <Sel label="Segmentação assistencial" valor={p.segmentacao} opcoes={OPC.segmentacao} onChange={(v) => set("segmentacao", v)} />
-          <Sel label="Abrangência geográfica" valor={p.abrangencia} opcoes={OPC.abrangencia} onChange={(v) => set("abrangencia", v)} />
+          <Sel
+            label="Abrangência geográfica"
+            valor={p.abrangencia}
+            opcoes={OPC.abrangencia}
+            onChange={(v) =>
+              setP((x) => ({
+                ...x,
+                abrangencia: v,
+                areaAtuacao: v === "Nacional" ? ["Todo o território nacional"] : [...MUNICIPIOS_REGIAO],
+                redeNacional: v === "Nacional" ? x.redeNacional ?? "Básica" : undefined,
+              }))
+            }
+          />
           <Sel label="Padrão de acomodação" valor={p.acomodacao} opcoes={OPC.acomodacao} onChange={(v) => set("acomodacao", v)} />
           <Sel label="Fator moderador" valor={p.fatorModerador} opcoes={OPC.fator} onChange={(v) => set("fatorModerador", v)} />
           <Sel label="Formação de preço" valor={p.formacaoPreco} opcoes={OPC.formacao} onChange={(v) => set("formacaoPreco", v)} />
           <Sel label="Situação na ANS" valor={p.situacaoANS} opcoes={OPC.situacao} onChange={(v) => set("situacaoANS", v)} />
           <Sel label="Status comercial (interno)" valor={p.statusComercial} opcoes={OPC.status} onChange={(v) => set("statusComercial", v)} />
-          <Campo label="Área de atuação (separe por vírgula)">
-            <input className="input" value={p.areaAtuacao.join(", ")} onChange={(e) => set("areaAtuacao", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))} />
-          </Campo>
+        </div>
+        <div className="mt-4 rounded-xl border border-gray-200 p-4">
+          {p.abrangencia === "Nacional" ? (
+            <>
+              <label className="label">Rede nacional referenciada</label>
+              <div className="flex flex-wrap gap-2">
+                {OPC.redeNacional.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => set("redeNacional", n)}
+                    className="rounded-lg px-4 py-2 text-sm font-bold text-white transition"
+                    style={{ background: NIVEL_COR[n], opacity: p.redeNacional === n ? 1 : 0.35 }}
+                  >
+                    + Rede Nacional {n}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Produto nacional = rede direta da operadora (selecionada abaixo) + rede nacional referenciada do nível escolhido.
+                Área de atuação: todo o território nacional.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <label className="label">Área de atuação ({p.areaAtuacao.length} de {MUNICIPIOS_REGIAO.length} municípios)</label>
+                <button type="button" className="text-xs font-semibold text-brand-700 hover:underline" onClick={() => set("areaAtuacao", [...MUNICIPIOS_REGIAO])}>
+                  Selecionar todos
+                </button>
+              </div>
+              <div className="mt-1 grid gap-1 sm:grid-cols-2 lg:grid-cols-4">
+                {MUNICIPIOS_REGIAO.map((m) => (
+                  <label key={m} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="accent-brand-600"
+                      checked={p.areaAtuacao.includes(m)}
+                      onChange={(e) => set("areaAtuacao", e.target.checked ? [...p.areaAtuacao, m] : p.areaAtuacao.filter((x) => x !== m))}
+                    />
+                    {m}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-gray-500">Grupo de municípios: atendimento pela rede direta da operadora — especifique os prestadores abaixo.</p>
+            </>
+          )}
         </div>
         {p.contratacao === "Coletivo por Adesão" && (
           <Dica>Coletivo por adesão: exige vínculo do beneficiário com pessoa jurídica de caráter profissional, classista ou setorial (RN 557/2022).</Dica>
@@ -198,53 +258,120 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
 
       {p.fatorModerador !== "Sem fator moderador" && (
         <Secao titulo={`Perfil de ${p.fatorModerador.toLowerCase()}`}>
-          <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-            <div className="space-y-2">
-              {p.coparticipacao.map((c, i) => (
-                <div key={c.id} className="grid grid-cols-12 gap-2">
-                  <input className="input col-span-12 sm:col-span-5" value={c.procedimento} onChange={(e) => setCop(i, { procedimento: e.target.value })} />
-                  <select className="input col-span-4 sm:col-span-2" value={c.tipo} onChange={(e) => setCop(i, { tipo: e.target.value as ItemCoparticipacao["tipo"] })}>
-                    <option>Percentual</option><option>Valor fixo</option>
+          <div className="hidden grid-cols-12 gap-2 sm:grid">
+            <span className="filtro-label col-span-5">Classificação</span>
+            <span className="filtro-label col-span-2">Tipo</span>
+            <span className="filtro-label col-span-2">Valor (% ou R$)</span>
+            <span className="filtro-label col-span-2">Limite da classificação (R$)</span>
+          </div>
+          <div className="space-y-2">
+            {p.coparticipacao.map((c, i) => (
+              <div key={c.id} className="grid grid-cols-12 gap-2">
+                <input className="input col-span-12 sm:col-span-5" value={c.procedimento} onChange={(e) => setCop(i, { procedimento: e.target.value })} />
+                <select className="input col-span-4 sm:col-span-2" value={c.tipo} onChange={(e) => setCop(i, { tipo: e.target.value as ItemCoparticipacao["tipo"] })}>
+                  <option>Percentual</option><option>Valor fixo</option>
+                </select>
+                <input type="number" className="input col-span-3 sm:col-span-2" title={c.tipo === "Percentual" ? "%" : "R$"} value={c.valor} onChange={(e) => setCop(i, { valor: Number(e.target.value) })} />
+                <input type="number" className="input col-span-3 sm:col-span-2" placeholder="Sem limite" value={c.limite ?? ""} onChange={(e) => setCop(i, { limite: e.target.value ? Number(e.target.value) : undefined })} />
+                <button className="col-span-2 text-red-500 sm:col-span-1" onClick={() => set("coparticipacao", p.coparticipacao.filter((_, j) => j !== i))} aria-label="Remover"><Trash2 size={18} /></button>
+              </div>
+            ))}
+            <button
+              className="btn-outline"
+              onClick={() => set("coparticipacao", [...p.coparticipacao, { id: Math.random().toString(36).slice(2), procedimento: "Nova classificação", tipo: "Valor fixo", valor: 0 }])}
+            >
+              <Plus size={16} /> Adicionar classificação
+            </button>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-brand-200 bg-brand-50 p-4">
+            <label className="flex items-center gap-2 text-sm font-semibold text-brand-900">
+              <input
+                type="checkbox"
+                className="accent-brand-600"
+                checked={!!p.limiteGlobal}
+                onChange={(e) => set("limiteGlobal", e.target.checked ? { valor: 600, periodo: "Mensal" } : undefined)}
+              />
+              Aplicar limite global (soma de todas as classificações)
+            </label>
+            {p.limiteGlobal && (
+              <div className="mt-3 flex flex-wrap items-end gap-3">
+                <Campo label="Limite global (R$)">
+                  <input type="number" className="input w-40" value={p.limiteGlobal.valor} onChange={(e) => set("limiteGlobal", { ...p.limiteGlobal!, valor: Number(e.target.value) })} />
+                </Campo>
+                <Campo label="Período">
+                  <select className="input w-36" value={p.limiteGlobal.periodo} onChange={(e) => set("limiteGlobal", { ...p.limiteGlobal!, periodo: e.target.value as "Mensal" | "Anual" })}>
+                    <option>Mensal</option><option>Anual</option>
                   </select>
-                  <input type="number" className="input col-span-3 sm:col-span-2" title={c.tipo === "Percentual" ? "%" : "R$"} value={c.valor} onChange={(e) => setCop(i, { valor: Number(e.target.value) })} />
-                  <input type="number" className="input col-span-3 sm:col-span-2" placeholder="Teto R$" value={c.limite ?? ""} onChange={(e) => setCop(i, { limite: e.target.value ? Number(e.target.value) : undefined })} />
-                  <button className="col-span-2 sm:col-span-1 text-red-500" onClick={() => set("coparticipacao", p.coparticipacao.filter((_, j) => j !== i))} aria-label="Remover"><Trash2 size={18} /></button>
-                </div>
-              ))}
-              <button
-                className="btn-outline"
-                onClick={() => set("coparticipacao", [...p.coparticipacao, { id: Math.random().toString(36).slice(2), procedimento: "Novo item", tipo: "Valor fixo", valor: 0 }])}
-              >
-                <Plus size={16} /> Adicionar item
-              </button>
-            </div>
-            <ListaRegras titulo="Validação CONSU 8/1998" regras={regrasCopart} />
+                </Campo>
+                <p className="pb-2 text-xs text-gray-500">
+                  Soma dos limites das classificações: {brl(p.coparticipacao.reduce((t, c) => t + (c.limite ?? 0), 0))}
+                </p>
+              </div>
+            )}
           </div>
         </Secao>
       )}
 
-      <Secao titulo={`Rede credenciada (${p.rede.length} prestadores)`}>
+      <Secao titulo={`Rede direta (${p.rede.length} prestadores)`}>
+        {p.abrangencia === "Nacional" && p.redeNacional && (
+          <div className="mb-4 rounded-lg px-4 py-2 text-sm font-bold text-white" style={{ background: NIVEL_COR[p.redeNacional] }}>
+            Além da rede direta abaixo, o produto conta com a Rede Nacional {p.redeNacional}.
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input type="checkbox" className="accent-brand-600" checked={soArea} onChange={(e) => setSoArea(e.target.checked)} />
+            Mostrar só prestadores dos municípios da área de atuação
+          </label>
+          <span className="text-xs text-gray-400">Cadastro de prestadores em Gestão de Rede.</span>
+        </div>
         <Dica>
           Exclusão ou substituição de prestador hospitalar exige comunicação/autorização prévia à ANS e aviso aos beneficiários (Lei 9.656/1998, art. 17).
         </Dica>
-        <div className="mt-4 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {TIPOS.map((t) => (
-            <div key={t}>
-              <div className="mb-2 text-sm font-bold text-brand-900">{t}</div>
-              <div className="space-y-1">
-                {PRESTADORES.filter((x) => x.tipo === t).map((x) => (
-                  <label key={x.id} className="flex cursor-pointer items-start gap-2 rounded-lg p-1.5 text-sm hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 accent-brand-600"
-                      checked={p.rede.includes(x.id)}
-                      onChange={(e) => set("rede", e.target.checked ? [...p.rede, x.id] : p.rede.filter((r) => r !== x.id))}
-                    />
-                    <span>{x.nome}<span className="block text-xs text-gray-400">{x.municipio}/{x.uf}</span></span>
-                  </label>
-                ))}
+        <div className="mt-4 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {TIPOS_PRESTADOR.map((t) => {
+            const lista = prestadores.filter((x) => x.tipo === t && (x.ativo || p.rede.includes(x.id)) && (!soArea || p.abrangencia === "Nacional" || p.areaAtuacao.includes(`${x.cidade}/${x.uf}`)));
+            return (
+              <div key={t}>
+                <div className="mb-2 text-sm font-bold text-brand-900">{t} ({lista.filter((x) => p.rede.includes(x.id)).length}/{lista.length})</div>
+                <div className="space-y-1">
+                  {lista.map((x) => (
+                    <label key={x.id} className="flex cursor-pointer items-start gap-2 rounded-lg p-1.5 text-sm hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 accent-brand-600"
+                        checked={p.rede.includes(x.id)}
+                        onChange={(e) => set("rede", e.target.checked ? [...p.rede, x.id] : p.rede.filter((r) => r !== x.id))}
+                      />
+                      <span>{x.nome}<span className="block text-xs text-gray-400">{x.bairro} · {x.cidade}/{x.uf}{!x.ativo && " · inativo"}</span></span>
+                    </label>
+                  ))}
+                  {!lista.length && <span className="text-xs text-gray-400">Nenhum prestador.</span>}
+                </div>
               </div>
-            </div>
+            );
+          })}
+        </div>
+      </Secao>
+
+      <Secao titulo="Soluções adicionais permitidas">
+        <p className="mb-3 text-sm text-gray-500">Marque quais soluções adicionais podem ser vendidas junto com este produto.</p>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {solucoes.map((sol) => (
+            <label key={sol.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 p-3 hover:border-brand-300">
+              <input
+                type="checkbox"
+                className="accent-brand-600"
+                checked={p.solucoes.includes(sol.id)}
+                onChange={(e) => set("solucoes", e.target.checked ? [...p.solucoes, sol.id] : p.solucoes.filter((x) => x !== sol.id))}
+              />
+              <span className="h-8 w-1.5 rounded-full" style={{ background: sol.cor }} />
+              <span className="text-sm">
+                <span className="font-semibold">{sol.nome}</span>
+                <span className="block text-xs text-gray-500">{sol.categoria}{!sol.ativa && " · inativa"}</span>
+              </span>
+            </label>
           ))}
         </div>
       </Secao>

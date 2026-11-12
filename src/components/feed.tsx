@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { Building, DollarSign, FileText, Percent, PlusCircle, RefreshCw, ToggleRight } from "lucide-react";
+import { Building, DollarSign, FileText, Percent, PlusCircle, Puzzle, RefreshCw, ToggleRight } from "lucide-react";
 import Link from "next/link";
 import { dataBR } from "@/lib/ans";
 import { useStore } from "@/lib/store";
@@ -15,6 +15,7 @@ export const ICONE_TIPO: Record<TipoAlteracao, { icon: typeof Building; cor: str
   Coparticipação: { icon: Percent, cor: "bg-violet-100 text-violet-700" },
   Material: { icon: FileText, cor: "bg-pink-100 text-pink-700" },
   Cadastro: { icon: RefreshCw, cor: "bg-gray-100 text-gray-700" },
+  "Soluções adicionais": { icon: Puzzle, cor: "bg-sky-100 text-sky-700" },
   "Novo produto": { icon: PlusCircle, cor: "bg-brand-100 text-brand-700" },
 };
 
@@ -23,7 +24,7 @@ export function FeedItem({ alteracao, acoes }: { alteracao: Alteracao; acoes?: R
   const autor = useStore((s) => s.usuarios.find((u) => u.id === alteracao.autorId));
   const { icon: Icon, cor } = ICONE_TIPO[alteracao.tipo];
   return (
-    <div className="flex gap-4 rounded-xl border border-gray-100 bg-white p-4 transition hover:border-brand-200">
+    <div className="flex gap-4 rounded-xl border border-gray-100 bg-surface p-4 transition hover:border-brand-200">
       <div className={clsx("h-fit rounded-xl p-2.5", cor)}><Icon size={20} /></div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">

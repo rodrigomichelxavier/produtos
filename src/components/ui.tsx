@@ -70,14 +70,14 @@ export function Tabs<T extends string>({
 
 export function Segmented<T extends string>({ opcoes, valor, onChange }: { opcoes: readonly T[]; valor: T; onChange: (v: T) => void }) {
   return (
-    <div className="inline-flex rounded-xl border border-gray-300 bg-white p-1">
+    <div className="inline-flex rounded-xl border border-gray-300 bg-surface p-1">
       {opcoes.map((o) => (
         <button
           key={o}
           onClick={() => onChange(o)}
           className={clsx(
             "rounded-lg px-4 py-1.5 text-sm font-semibold transition",
-            o === valor ? "bg-brand-700 text-white shadow" : "text-gray-600 hover:bg-gray-100",
+            o === valor ? "bg-accent text-white shadow" : "text-gray-600 hover:bg-gray-100",
           )}
         >
           {o}

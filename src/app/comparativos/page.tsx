@@ -1,21 +1,21 @@
 "use client";
 
 import clsx from "clsx";
-import { ArrowLeftRight, Minus, Plus, Star } from "lucide-react";
+import { ArrowLeftRight, Check, Globe2, Minus, Plus, Star } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { ProdutoCapa } from "@/components/produto";
+import { NIVEL_COR, ProdutoCapa } from "@/components/produto";
 import { PageHeader, Vazio } from "@/components/ui";
-import { PRESTADORES } from "@/data/seed";
 import { brl, formatarRegistro, pct } from "@/lib/ans";
 import { useStore } from "@/lib/store";
 import { FAIXAS_ETARIAS, type Prestador, type Produto, type TipoPrestador } from "@/lib/types";
 
-const COR_A = "#1d5a23";
+const COR_A = "#2e8b34";
 const COR_B = "#0284c7";
 const TIPOS: { tipo: TipoPrestador; label: string }[] = [
   { tipo: "Hospital", label: "Hospitais" },
+  { tipo: "Pronto atendimento", label: "Pronto atendimento" },
   { tipo: "Laboratório", label: "Laboratórios" },
   { tipo: "Imagem", label: "Centros de imagem" },
   { tipo: "Clínica", label: "Clínicas" },
@@ -75,11 +75,15 @@ function Seletor({ cor, rotulo, valor, onChange, produtos }: {
 }
 
 function Resultado({ a, b, soDif, setSoDif }: { a: Produto; b: Produto; soDif: boolean; setSoDif: (v: boolean) => void }) {
+  const solucoes = useStore((s) => s.solucoes);
+  const nomesSol = (p: Produto) => solucoes.filter((s) => p.solucoes.includes(s.id)).map((s) => s.nome).join(", ") || "Nenhuma";
+  const lg = (p: Produto) => (p.limiteGlobal ? `${brl(p.limiteGlobal.valor)} (${p.limiteGlobal.periodo.toLowerCase()})` : "—");
   const linhas: [string, string, string][] = [
     ["Registro ANS", formatarRegistro(a.registroANS), formatarRegistro(b.registroANS)],
     ["Tipo de contratação", a.contratacao, b.contratacao],
     ["Segmentação", a.segmentacao, b.segmentacao],
     ["Abrangência", a.abrangencia, b.abrangencia],
+    ["Rede nacional", a.redeNacional ? `+ Rede Nacional ${a.redeNacional}` : "Somente rede direta", b.redeNacional ? `+ Rede Nacional ${b.redeNacional}` : "Somente rede direta"],
     ["Área de atuação", a.areaAtuacao.join(", "), b.areaAtuacao.join(", ")],
     ["Acomodação", a.acomodacao, b.acomodacao],
     ["Fator moderador", a.fatorModerador, b.fatorModerador],
@@ -88,7 +92,9 @@ function Resultado({ a, b, soDif, setSoDif }: { a: Produto; b: Produto; soDif: b
     ["Status comercial", a.statusComercial, b.statusComercial],
     ["Preço 1ª faixa", brl(a.precoComercial[0]), brl(b.precoComercial[0])],
     ["Preço 10ª faixa", brl(a.precoComercial[9]), brl(b.precoComercial[9])],
-    ["Tamanho da rede", `${a.rede.length} prestadores`, `${b.rede.length} prestadores`],
+    ["Rede direta", `${a.rede.length} prestadores`, `${b.rede.length} prestadores`],
+    ["Limite global de coparticipação", lg(a), lg(b)],
+    ["Soluções adicionais", nomesSol(a), nomesSol(b)],
   ];
   const difs = linhas.filter(([, x, y]) => x !== y);
   const visiveis = soDif ? difs : linhas;
@@ -167,9 +173,12 @@ function Resultado({ a, b, soDif, setSoDif }: { a: Produto; b: Produto; soDif: b
         </div>
       </div>
 
+      <ComparaSolucoes a={a} b={b} />
+
       <div className="card p-5">
         <h2 className="font-bold text-brand-900">Rede credenciada</h2>
-        <p className="mb-5 text-sm text-gray-500">O que cada produto tem a mais ou a menos, por tipo de prestador</p>
+        <p className="mb-5 text-sm text-gray-500">Rede nacional referenciada e, na rede direta, o que cada produto tem a mais ou a menos por tipo de prestador</p>
+        <ComparaRedeNacional a={a} b={b} />
         <div className="space-y-8">
           {TIPOS.map(({ tipo, label }) => <ComparaRede key={tipo} a={a} b={b} tipo={tipo} label={label} />)}
         </div>
@@ -179,7 +188,8 @@ function Resultado({ a, b, soDif, setSoDif }: { a: Produto; b: Produto; soDif: b
 }
 
 function ComparaRede({ a, b, tipo, label }: { a: Produto; b: Produto; tipo: TipoPrestador; label: string }) {
-  const todos = PRESTADORES.filter((p) => p.tipo === tipo);
+  const prestadores = useStore((s) => s.prestadores);
+  const todos = prestadores.filter((p) => p.tipo === tipo);
   const soA = todos.filter((p) => a.rede.includes(p.id) && !b.rede.includes(p.id));
   const soB = todos.filter((p) => b.rede.includes(p.id) && !a.rede.includes(p.id));
   const ambos = todos.filter((p) => a.rede.includes(p.id) && b.rede.includes(p.id));
@@ -224,11 +234,81 @@ function Coluna({ titulo, cor, itens, icone }: { titulo: string; cor: string; it
               <span className="mt-0.5" style={{ color: cor }}>{icone ?? "•"}</span>
               <span>
                 {p.nome} {p.destaque && <Star size={12} className="inline fill-amber-400 text-amber-400" />}
-                <span className="block text-xs text-gray-400">{p.municipio}/{p.uf}</span>
+                <span className="block text-xs text-gray-400">{p.bairro} · {p.cidade}/{p.uf}</span>
               </span>
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+const ORDEM_NACIONAL = { Básica: 1, Especial: 2, Master: 3 } as const;
+
+function ComparaRedeNacional({ a, b }: { a: Produto; b: Produto }) {
+  const redes = useStore((s) => s.redesNacionais);
+  if (!a.redeNacional && !b.redeNacional) return null;
+  const nA = a.redeNacional ? ORDEM_NACIONAL[a.redeNacional] : 0;
+  const nB = b.redeNacional ? ORDEM_NACIONAL[b.redeNacional] : 0;
+  const resumo =
+    nA === nB ? "Mesma rede nacional referenciada" : nA > nB ? `${a.nome} tem rede nacional superior` : `${b.nome} tem rede nacional superior`;
+  const Caixa = ({ p, cor }: { p: Produto; cor: string }) =>
+    p.redeNacional ? (
+      <div className="rounded-xl p-4 text-white" style={{ background: NIVEL_COR[p.redeNacional] }}>
+        <div className="flex items-center gap-2 font-bold"><Globe2 size={18} /> + Rede Nacional {p.redeNacional}</div>
+        <div className="mt-1 text-xs text-white/90">{redes.find((r) => r.nivel === p.redeNacional)?.descricao}</div>
+      </div>
+    ) : (
+      <div className="rounded-xl border border-dashed p-4 text-sm text-gray-500" style={{ borderColor: cor }}>
+        Somente rede direta ({p.abrangencia.toLowerCase()})
+      </div>
+    );
+  return (
+    <div className="mb-8">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="font-semibold text-gray-800">Rede nacional referenciada</h3>
+        <span className={clsx("text-xs font-semibold", nA === nB ? "text-gray-500" : "text-amber-700")}>{resumo}</span>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Caixa p={a} cor={COR_A} />
+        <Caixa p={b} cor={COR_B} />
+      </div>
+    </div>
+  );
+}
+
+function ComparaSolucoes({ a, b }: { a: Produto; b: Produto }) {
+  const solucoes = useStore((s) => s.solucoes);
+  const usadas = solucoes.filter((s) => a.solucoes.includes(s.id) || b.solucoes.includes(s.id));
+  return (
+    <div className="card p-5">
+      <h2 className="mb-4 font-bold text-brand-900">Soluções adicionais permitidas</h2>
+      {!usadas.length ? (
+        <Vazio texto="Nenhum dos produtos permite soluções adicionais." />
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide">
+              <th className="py-2 text-gray-500">Solução</th>
+              <th className="py-2 text-center" style={{ color: COR_A }}>A</th>
+              <th className="py-2 text-center" style={{ color: COR_B }}>B</th>
+            </tr>
+          </thead>
+          <tbody>
+            {usadas.map((s) => {
+              const emA = a.solucoes.includes(s.id);
+              const emB = b.solucoes.includes(s.id);
+              return (
+                <tr key={s.id} className={clsx("border-b border-gray-100", emA !== emB && "bg-amber-50/60")}>
+                  <td className="py-2 font-medium">{s.nome}</td>
+                  <td className="py-2 text-center">{emA ? <Check size={18} className="inline" style={{ color: COR_A }} /> : <Minus size={18} className="inline text-gray-300" />}</td>
+                  <td className="py-2 text-center">{emB ? <Check size={18} className="inline" style={{ color: COR_B }} /> : <Minus size={18} className="inline text-gray-300" />}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       )}
     </div>
   );

@@ -7,22 +7,16 @@ export type TipoContratacao =
   | "Coletivo por Adesão";
 
 export type Segmentacao =
-  | "Ambulatorial"
-  | "Hospitalar com Obstetrícia"
-  | "Hospitalar sem Obstetrícia"
   | "Ambulatorial + Hospitalar com Obstetrícia"
-  | "Ambulatorial + Hospitalar sem Obstetrícia"
-  | "Referência"
-  | "Odontológico";
+  | "Hospitalar"
+  | "Referência";
 
-export type Abrangencia =
-  | "Nacional"
-  | "Grupo de Estados"
-  | "Estadual"
-  | "Grupo de Municípios"
-  | "Municipal";
+export type Abrangencia = "Nacional" | "Grupo de Municípios";
 
-export type Acomodacao = "Enfermaria (coletiva)" | "Apartamento (individual)" | "Não se aplica";
+/** Nível da rede nacional referenciada que complementa a rede direta nos produtos nacionais. */
+export type RedeNacional = "Básica" | "Especial" | "Master";
+
+export type Acomodacao = "Enfermaria (coletiva)" | "Apartamento (individual)";
 
 export type FatorModerador = "Sem fator moderador" | "Coparticipação" | "Franquia";
 
@@ -32,23 +26,37 @@ export type SituacaoANS = "Ativo" | "Ativo com comercialização suspensa" | "Ca
 
 export type StatusComercial = "Em comercialização" | "Fora de comercialização" | "Em elaboração";
 
-export type TipoPrestador = "Hospital" | "Laboratório" | "Imagem" | "Clínica";
+export const TIPOS_PRESTADOR = ["Hospital", "Pronto atendimento", "Laboratório", "Imagem", "Clínica"] as const;
+export type TipoPrestador = (typeof TIPOS_PRESTADOR)[number];
 
 export interface Prestador {
   id: string;
   nome: string;
   tipo: TipoPrestador;
-  municipio: string;
+  cidade: string;
   uf: string;
+  bairro: string;
+  cnes?: string; // Cadastro Nacional de Estabelecimentos de Saúde (7 dígitos)
+  ativo: boolean;
   destaque?: boolean; // prestador de referência / premium
+}
+
+export interface InfoRedeNacional {
+  nivel: RedeNacional;
+  descricao: string;
 }
 
 export interface ItemCoparticipacao {
   id: string;
-  procedimento: string;
+  procedimento: string; // classificação (consultas, exames, terapias, internação...)
   tipo: "Percentual" | "Valor fixo";
   valor: number; // % ou R$
-  limite?: number; // teto por evento em R$
+  limite?: number; // limite da classificação em R$
+}
+
+export interface LimiteGlobal {
+  valor: number; // R$ — somatório de todas as classificações
+  periodo: "Mensal" | "Anual";
 }
 
 /** As 10 faixas etárias da RN nº 63/2003. */
@@ -73,7 +81,8 @@ export interface Produto {
   contratacao: TipoContratacao;
   segmentacao: Segmentacao;
   abrangencia: Abrangencia;
-  areaAtuacao: string[]; // municípios/UFs
+  redeNacional?: RedeNacional; // obrigatório quando abrangência = Nacional
+  areaAtuacao: string[]; // municípios
   acomodacao: Acomodacao;
   fatorModerador: FatorModerador;
   formacaoPreco: FormacaoPreco;
@@ -82,9 +91,23 @@ export interface Produto {
   precoComercial: number[]; // 10 faixas
   precoNTRP: number[]; // 10 faixas (Nota Técnica de Registro de Produto)
   coparticipacao: ItemCoparticipacao[];
-  rede: string[]; // ids de prestadores
+  limiteGlobal?: LimiteGlobal;
+  rede: string[]; // ids de prestadores da rede direta
+  solucoes: string[]; // ids das soluções adicionais permitidas
   cor: string; // cor do card (visual)
   atualizadoEm: string;
+}
+
+export interface SolucaoAdicional {
+  id: string;
+  nome: string;
+  categoria: "Assistência" | "Bem-estar" | "Benefícios" | "Seguros";
+  fornecedor: string;
+  descricao: string;
+  precoMensal: number;
+  cobranca: "Por beneficiário" | "Por contrato";
+  ativa: boolean;
+  cor: string;
 }
 
 export type Perfil = "Administrador" | "Gestor" | "Colaborador" | "Consulta";
@@ -101,7 +124,7 @@ export interface Usuario {
   criadoEm: string;
 }
 
-export type CategoriaMaterial = "Uso interno" | "Uso externo" | "Lâminas" | "Tabelas de preço";
+export type CategoriaMaterial = "Uso interno" | "Uso externo";
 
 export interface Material {
   id: string;
@@ -123,6 +146,7 @@ export type TipoAlteracao =
   | "Coparticipação"
   | "Material"
   | "Cadastro"
+  | "Soluções adicionais"
   | "Novo produto";
 
 export type StatusModeracao = "Pendente" | "Publicada" | "Descartada";
