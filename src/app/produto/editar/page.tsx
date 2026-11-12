@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ImagePlus, Info, Plus, Save, Trash2, Wand2 } from "lucide-react";
+import { ArrowLeft, ClipboardPaste, Copy, ImagePlus, Info, Plus, Save, Trash2, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useRef, useState } from "react";
@@ -8,11 +8,11 @@ import { ICONES_PROD, NIVEL_COR, ProdutoCapa } from "@/components/produto";
 import { ListaRegras } from "@/components/regras";
 import { PageHeader, Vazio } from "@/components/ui";
 import { MUNICIPIOS_REGIAO } from "@/data/seed";
-import { brl, codigosDoProduto, validarFaixasRN63 } from "@/lib/ans";
+import { brl, codigosDoProduto, desvioNTRP, situacaoMargem, validarFaixasRN63, variacaoFaixas } from "@/lib/ans";
 import { locaisPrestador, usePermissoes, useStore } from "@/lib/store";
 import {
   FAIXAS_ETARIAS, ICONES_PRODUTO, LINHAS, MAX_CODIGOS, MIN_CODIGOS, REGEX_CODIGO, TIPOS_PRESTADOR, type Linha, type Abrangencia, type Acomodacao, type FatorModerador, type FormacaoPreco,
-  type ItemCoparticipacao, type PerfilVenda, type Produto, type RedeNacional, type Segmentacao, type SituacaoANS, type StatusComercial,
+  type ItemCoparticipacao, type NotaTecnica, type PerfilVenda, type Produto, type RedeNacional, type Segmentacao, type SituacaoANS, type StatusComercial,
   type TipoContratacao,
 } from "@/lib/types";
 
@@ -29,6 +29,11 @@ const OPC = {
 };
 const FATORES_PADRAO = [1, 1.2, 1.38, 1.55, 1.72, 1.95, 2.5, 3.25, 4.2, 5.9];
 
+function ntPadrao(): NotaTecnica {
+  const t = FATORES_PADRAO.map((f) => Math.round(195 * f * 100) / 100);
+  return { numero: "", dataBase: "", atuario: "", t, inferior: t.map((v) => Math.round(v * 92) / 100), superior: t.map((v) => Math.round(v * 112) / 100) };
+}
+
 const uidLocal = () => Math.random().toString(36).slice(2, 9);
 function novoPerfil(nome: string, base?: PerfilVenda): PerfilVenda {
   return {
@@ -38,7 +43,9 @@ function novoPerfil(nome: string, base?: PerfilVenda): PerfilVenda {
     coparticipacao: base ? base.coparticipacao.map((c) => ({ ...c, id: uidLocal() })) : [],
     limiteGlobal: base?.limiteGlobal ? { ...base.limiteGlobal } : undefined,
     precoComercial: base ? [...base.precoComercial] : FATORES_PADRAO.map((f) => Math.round(200 * f * 100) / 100),
-    precoNTRP: base ? [...base.precoNTRP] : FATORES_PADRAO.map((f) => Math.round(195 * f * 100) / 100),
+    notaTecnica: base
+      ? { ...base.notaTecnica, t: [...base.notaTecnica.t], inferior: [...base.notaTecnica.inferior], superior: [...base.notaTecnica.superior] }
+      : ntPadrao(),
   };
 }
 
@@ -107,9 +114,14 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
       (pf.codigos.length < MIN_CODIGOS || pf.codigos.length > MAX_CODIGOS) && `${MIN_CODIGOS} a ${MAX_CODIGOS} códigos (hoje ${pf.codigos.length})`,
       pf.codigos.some((c) => outros.has(c)) && "código repetido em outro perfil",
       !validarFaixasRN63(pf.precoComercial).every((r) => r.ok) && "tabela fora da RN 63/2003",
+      pf.notaTecnica.t.some((v) => !v) && "T da nota técnica incompleto",
+      situacaoMargem(pf).some((m) => m === "abaixo" || m === "acima") && "preço comercial fora da margem da nota técnica",
     ].filter(Boolean) as string[];
   };
   const regrasPreco = validarFaixasRN63(perfil.precoComercial);
+  const variacoes = variacaoFaixas(perfil.precoComercial);
+  const desvios = desvioNTRP(perfil);
+  const margens = situacaoMargem(perfil);
   const regDigitos = p.registroANS.replace(/\D/g, "");
   const erros = [
     !p.nome.trim() && "Informe o nome comercial do produto.",
@@ -134,7 +146,7 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
     router.push(`/produto/?id=${novoId}`);
   };
 
-  const setPreco = (lista: "precoComercial" | "precoNTRP", i: number, v: number) =>
+  const setPreco = (lista: "precoComercial", i: number, v: number) =>
     setPerfil({ [lista]: perfil[lista].map((o, j) => (j === i ? v : o)) });
 
   const setCop = (i: number, patch: Partial<ItemCoparticipacao>) =>
@@ -459,14 +471,24 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
           </div>
         )}
 
+        <NotaTecnicaEditor
+          key={`nt-${perfil.id}`}
+          nota={perfil.notaTecnica}
+          onChange={(notaTecnica) => setPerfil({ notaTecnica })}
+          titulo={`Nota técnica (NTRP)${comCopart && p.perfis.length > 1 ? ` · ${perfil.nome}` : ""}`}
+        />
+
         <div className="mt-6">
-          <h3 className="mb-2 text-sm font-bold text-brand-900">Tabela de preços por faixa etária{comCopart && p.perfis.length > 1 ? ` · ${perfil.nome}` : ""}</h3>
+          <h3 className="mb-2 text-sm font-bold text-brand-900">Preço comercial por faixa etária{comCopart && p.perfis.length > 1 ? ` · ${perfil.nome}` : ""}</h3>
           <div className="mb-4 flex flex-wrap items-end gap-3">
+            <button className="btn-outline" onClick={() => setPerfil({ precoComercial: [...perfil.notaTecnica.t] })}>
+              <Copy size={16} /> Usar o T da nota técnica
+            </button>
             <button
               className="btn-outline"
               onClick={() => setPerfil({ precoComercial: FATORES_PADRAO.map((f) => Math.round(perfil.precoComercial[0] * f * 100) / 100) })}
             >
-              <Wand2 size={16} /> Gerar faixas a partir da 1ª (fatores padrão)
+              <Wand2 size={16} /> Gerar faixas a partir da 1ª
             </button>
             <div className="flex items-end gap-2">
               <Campo label="Reajuste %">
@@ -484,20 +506,44 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
-                  <th className="py-1">Faixa</th><th className="py-1">Preço comercial (R$)</th><th className="py-1 text-right">Variação</th><th className="py-1">NTRP (R$)</th>
+                  <th className="py-1">Faixa</th>
+                  <th className="py-1">Preço comercial (R$)</th>
+                  <th className="py-1 pr-3 text-right">Variação entre faixas</th>
+                  <th className="py-1 pr-3 text-right">Desvio vs T</th>
+                  <th className="py-1 pl-2 text-right">Margem NTRP</th>
                 </tr>
               </thead>
               <tbody>
-                {FAIXAS_ETARIAS.map((f, i) => (
-                  <tr key={f}>
-                    <td className="py-1 pr-3 font-medium">{i + 1}ª · {f}</td>
-                    <td className="py-1 pr-3"><input type="number" step="0.01" className="input" value={perfil.precoComercial[i]} onChange={(e) => setPreco("precoComercial", i, Number(e.target.value))} /></td>
-                    <td className="py-1 pr-3 text-right text-xs text-gray-500">
-                      {i === 0 ? "—" : `${((perfil.precoComercial[i] / perfil.precoComercial[i - 1] - 1) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`}
-                    </td>
-                    <td className="py-1"><input type="number" step="0.01" className="input" value={perfil.precoNTRP[i]} onChange={(e) => setPreco("precoNTRP", i, Number(e.target.value))} /></td>
-                  </tr>
-                ))}
+                {FAIXAS_ETARIAS.map((f, i) => {
+                  const v = variacoes[i];
+                  const m = margens[i];
+                  return (
+                    <tr key={f}>
+                      <td className="py-1 pr-3 font-medium">{i + 1}ª · {f}</td>
+                      <td className="py-1 pr-3">
+                        <input
+                          type="number"
+                          step="0.01"
+                          className={`input ${m === "abaixo" || m === "acima" ? "!border-red-400 !ring-red-100" : ""}`}
+                          value={perfil.precoComercial[i]}
+                          onChange={(e) => setPreco("precoComercial", i, Number(e.target.value))}
+                        />
+                      </td>
+                      <td className="py-1 pr-3 text-right text-xs text-gray-600">
+                        {v === null ? "—" : `${v >= 0 ? "+" : ""}${(v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`}
+                      </td>
+                      <td className="py-1 pr-3 text-right text-xs text-gray-500">
+                        {perfil.notaTecnica.t[i] ? `${desvios[i] >= 0 ? "+" : ""}${(desvios[i] * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : "—"}
+                      </td>
+                      <td className="py-1 text-right text-xs">
+                        {m === "ok" && <span className="font-semibold text-brand-700">dentro</span>}
+                        {m === "abaixo" && <span className="font-semibold text-red-600">abaixo</span>}
+                        {m === "acima" && <span className="font-semibold text-red-600">acima</span>}
+                        {m === "sem" && <span className="text-gray-400">—</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             <ListaRegras titulo="Validação RN 63/2003" regras={regrasPreco} />
@@ -663,6 +709,90 @@ function CodigosInput({ codigos, onChange, emUso }: { codigos: string[]; onChang
       <p className={`mt-1 text-xs ${erro ? "text-red-600" : "text-gray-400"}`}>
         {erro || "4 letras + 2 números. Enter, vírgula ou espaço para adicionar; cole vários de uma vez."}
       </p>
+    </div>
+  );
+}
+
+/** Cadastro da Nota Técnica (NTRP): T, margem inferior e superior por faixa — aceita colar do Excel. */
+function NotaTecnicaEditor({ nota, onChange, titulo }: { nota: NotaTecnica; onChange: (n: NotaTecnica) => void; titulo: string }) {
+  const [inf, setInf] = useState(8);
+  const [sup, setSup] = useState(12);
+  const [aviso, setAviso] = useState("");
+  const setCel = (col: "t" | "inferior" | "superior", i: number, v: number) => onChange({ ...nota, [col]: nota[col].map((o, j) => (j === i ? v : o)) });
+
+  /** Cola um bloco do Excel (linhas = faixas; colunas = T, margem inferior, margem superior) a partir da célula clicada. */
+  const colar = (e: React.ClipboardEvent<HTMLInputElement>, linha: number, colIni: number) => {
+    const texto = e.clipboardData.getData("text");
+    if (!/[\t\n]/.test(texto.trim())) return; // valor único: colagem normal
+    e.preventDefault();
+    const cols: ("t" | "inferior" | "superior")[] = ["t", "inferior", "superior"];
+    const novo = { ...nota, t: [...nota.t], inferior: [...nota.inferior], superior: [...nota.superior] };
+    const num = (x: string) => Number(x.replace(/[R$\s.]/g, "").replace(",", "."));
+    const linhas = texto.trim().split(/\r?\n/);
+    linhas.forEach((ln, di) => {
+      ln.split("\t").forEach((cel, dj) => {
+        const i = linha + di, c = cols[colIni + dj];
+        if (i < 10 && c && cel.trim() && !Number.isNaN(num(cel))) novo[c][i] = num(cel);
+      });
+    });
+    onChange(novo);
+    setAviso(`${Math.min(linhas.length, 10 - linha)} faixa(s) coladas da planilha.`);
+    window.setTimeout(() => setAviso(""), 3000);
+  };
+
+  return (
+    <div className="mt-6 rounded-xl border border-gray-200 p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-bold text-brand-900">{titulo}</h3>
+        <span className="flex items-center gap-1 text-[11px] text-gray-400"><ClipboardPaste size={13} /> Cole as colunas T, margem inferior e margem superior direto do Excel</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Campo label="Nº / protocolo da NTRP"><input className="input" value={nota.numero} onChange={(e) => onChange({ ...nota, numero: e.target.value })} placeholder="Ex.: NT-0011-01" /></Campo>
+        <Campo label="Data-base"><input type="month" className="input" value={nota.dataBase} onChange={(e) => onChange({ ...nota, dataBase: e.target.value })} /></Campo>
+        <Campo label="Atuário responsável"><input className="input" value={nota.atuario} onChange={(e) => onChange({ ...nota, atuario: e.target.value })} placeholder="Nome · MIBA" /></Campo>
+      </div>
+      <table className="mt-4 w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+            <th className="py-1">Faixa</th>
+            <th className="py-1">T · preço sugerido (R$)</th>
+            <th className="py-1">Margem inferior (R$)</th>
+            <th className="py-1">Margem superior (R$)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {FAIXAS_ETARIAS.map((f, i) => (
+            <tr key={f}>
+              <td className="py-1 pr-3 font-medium">{i + 1}ª · {f}</td>
+              {(["t", "inferior", "superior"] as const).map((col, c) => (
+                <td key={col} className="py-1 pr-3">
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="input"
+                    value={nota[col][i] || ""}
+                    onChange={(e) => setCel(col, i, Number(e.target.value))}
+                    onPaste={(e) => colar(e, i, c)}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+        <span>Sem as margens da atuária? Calcular a partir do T:</span>
+        <span>−</span><input type="number" className="input w-16 px-2 py-1 text-xs" value={inf} onChange={(e) => setInf(Number(e.target.value))} /><span>%</span>
+        <span>/ +</span><input type="number" className="input w-16 px-2 py-1 text-xs" value={sup} onChange={(e) => setSup(Number(e.target.value))} /><span>%</span>
+        <button
+          type="button"
+          className="font-semibold text-brand-700 hover:underline"
+          onClick={() => onChange({ ...nota, inferior: nota.t.map((v) => Math.round(v * (100 - inf)) / 100), superior: nota.t.map((v) => Math.round(v * (100 + sup)) / 100) })}
+        >
+          Calcular margens
+        </button>
+        {aviso && <span className="ml-auto font-semibold text-brand-700">{aviso}</span>}
+      </div>
     </div>
   );
 }

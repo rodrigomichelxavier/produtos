@@ -86,9 +86,14 @@ function diffProduto(antes: Produto, depois: Produto, prestadores: Prestador[], 
     d.precoComercial.forEach((v, i) => {
       if (v !== a.precoComercial[i]) precoDet.push(`Faixa ${i + 1}${rot(d)}: ${brl(a.precoComercial[i])} → ${brl(v)}`);
     });
-    d.precoNTRP.forEach((v, i) => {
-      if (v !== a.precoNTRP[i]) precoDet.push(`NTRP faixa ${i + 1}${rot(d)}: ${brl(a.precoNTRP[i])} → ${brl(v)}`);
+    const na = a.notaTecnica, nd = d.notaTecnica;
+    const colunas: ["t" | "inferior" | "superior", string][] = [["t", "T"], ["inferior", "margem inferior"], ["superior", "margem superior"]];
+    colunas.forEach(([k, rotulo]) => {
+      const mudou = nd[k].map((v, i) => (v !== na[k][i] ? i : -1)).filter((i) => i >= 0);
+      if (mudou.length > 3) precoDet.push(`NTRP${rot(d)}: ${rotulo} atualizada em ${mudou.length} faixas`);
+      else mudou.forEach((i) => precoDet.push(`NTRP ${rotulo} faixa ${i + 1}${rot(d)}: ${brl(na[k][i])} → ${brl(nd[k][i])}`));
     });
+    if (na.numero !== nd.numero) precoDet.push(`Nota técnica${rot(d)}: ${na.numero || "—"} → ${nd.numero || "—"}`);
     d.coparticipacao.forEach((c) => {
       const old = a.coparticipacao.find((o) => o.procedimento === c.procedimento);
       if (!old) copDet.push(`Incluído${rot(d)}: ${c.procedimento} (${fmt(c)})`);
@@ -316,7 +321,7 @@ export const useStore = create<State>()(
     {
       name: "portal-produtos-demo",
       storage: createJSONStorage(() => armazenamentoSeguro),
-      version: 9,
+      version: 10,
       // Dados de versões anteriores do protótipo são descartados.
       // Dados fictícios são renovados, mas usuários (fotos, nomes, perfis) e a configuração são preservados.
       migrate: (antigo) => {

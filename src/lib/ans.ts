@@ -58,13 +58,27 @@ export function validarFaixasRN63(precos: number[]): Regra[] {
   ];
 }
 
-/** Desvio do preço comercial em relação à NTRP, por faixa. */
-export function desvioNTRP(perfil: Pick<PerfilVenda, "precoComercial" | "precoNTRP">): number[] {
+/** Desvio do preço comercial em relação ao T (preço sugerido) da NTRP, por faixa. */
+export function desvioNTRP(perfil: Pick<PerfilVenda, "precoComercial" | "notaTecnica">): number[] {
   return perfil.precoComercial.map((v, i) => {
-    const base = perfil.precoNTRP[i];
-    return base ? v / base - 1 : 0;
+    const t = perfil.notaTecnica.t[i];
+    return t ? v / t - 1 : 0;
   });
 }
+
+/** Situação do preço comercial frente às margens da NTRP, por faixa. */
+export function situacaoMargem(perfil: Pick<PerfilVenda, "precoComercial" | "notaTecnica">): ("ok" | "abaixo" | "acima" | "sem")[] {
+  const nt = perfil.notaTecnica;
+  return perfil.precoComercial.map((v, i) => {
+    if (!nt.inferior[i] && !nt.superior[i]) return "sem";
+    if (nt.inferior[i] && v < nt.inferior[i] - 0.005) return "abaixo";
+    if (nt.superior[i] && v > nt.superior[i] + 0.005) return "acima";
+    return "ok";
+  });
+}
+
+/** Variação percentual de cada faixa em relação à anterior (1ª faixa = null). */
+export const variacaoFaixas = (precos: number[]) => precos.map((v, i) => (i === 0 || !precos[i - 1] ? null : v / precos[i - 1] - 1));
 
 /** Menor preço da 1ª faixa entre os perfis ("a partir de"). */
 export const precoBase = (p: Pick<Produto, "perfis">) => Math.min(...p.perfis.map((x) => x.precoComercial[0]));

@@ -57,7 +57,9 @@ A operadora tem um **registro ANS de operadora** (6 dígitos). Características 
 
 Implementação: `src/lib/ans.ts → validarFaixasRN63`.
 
-**NTRP (Nota Técnica de Registro de Produto)**: base atuarial do preço registrada na ANS. O portal compara preço comercial × NTRP com uma tolerância interna configurável.
+**NTRP (Nota Técnica de Registro de Produto)**: base atuarial do preço. No portal, cada perfil de venda tem sua NTRP com, por faixa,
+**T (preço sugerido)**, **margem inferior** e **margem superior** (calculadas pela atuária), além de nº/protocolo, data-base e atuário.
+O preço comercial precisa ficar dentro das margens; variação entre faixas e desvio vs T são calculados automaticamente.
 
 Reajuste: planos individuais/familiares têm reajuste anual limitado ao índice divulgado pela ANS; coletivos são negociados (com agrupamento de contratos para carteiras pequenas).
 

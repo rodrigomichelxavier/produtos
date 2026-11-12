@@ -7,6 +7,7 @@ import type {
   InfoRedeNacional,
   ItemCoparticipacao,
   Material,
+  NotaTecnica,
   PerfilVenda,
   Prestador,
   Produto,
@@ -142,6 +143,13 @@ type Base = Omit<Produto, "formacaoPreco" | "situacaoANS" | "atualizadoEm" | "pe
     perfil2?: { pct: number; desconto: number; codigos: string[] };
   };
 
+const r2 = (v: number) => Math.round(v * 100) / 100;
+/** NTRP fictícia: T = tabela da nota; margens de -8% e +12% calculadas "pela atuária". */
+const nota = (base: number, numero: string, mes: string): NotaTecnica => {
+  const t = tabela(base);
+  return { numero, dataBase: mes, atuario: "Atuária Aurora · MIBA 0000 (fictício)", t, inferior: t.map((v) => r2(v * 0.92)), superior: t.map((v) => r2(v * 1.12)) };
+};
+
 const pctDe = (itens: ItemCoparticipacao[]) => Math.max(0, ...itens.filter((i) => i.tipo === "Percentual").map((i) => i.valor));
 
 const prod = ({ preco, ntrp, dias, codigos, coparticipacao, limiteGlobal, perfil2, ...b }: Base): Produto => {
@@ -150,7 +158,7 @@ const prod = ({ preco, ntrp, dias, codigos, coparticipacao, limiteGlobal, perfil
     nome: coparticipacao.length ? `Coparticipação ${pctDe(coparticipacao)}%` : "Sem coparticipação",
     codigos, coparticipacao, limiteGlobal,
     precoComercial: tabela(preco),
-    precoNTRP: tabela(ntrp),
+    notaTecnica: nota(ntrp, `NT-${b.registroANS.slice(-4)}-01`, "2026-05"),
   }];
   if (perfil2) {
     const f = 1 - perfil2.desconto;
@@ -165,7 +173,7 @@ const prod = ({ preco, ntrp, dias, codigos, coparticipacao, limiteGlobal, perfil
       })),
       limiteGlobal: limiteGlobal && { ...limiteGlobal, valor: Math.round(limiteGlobal.valor * 1.4) },
       precoComercial: tabela(preco * f),
-      precoNTRP: tabela(ntrp * f),
+      notaTecnica: nota(ntrp * f, `NT-${b.registroANS.slice(-4)}-02`, "2026-05"),
     });
   }
   return { formacaoPreco: "Pré-estabelecido", situacaoANS: "Ativo", ...b, perfis, atualizadoEm: diasAtras(dias) };

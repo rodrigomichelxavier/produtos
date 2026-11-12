@@ -38,10 +38,7 @@ export default function ConfiguracoesPage() {
 
         <div className="card space-y-4 p-6">
           <h2 className="font-bold text-brand-900">Regras do portal</h2>
-          <div>
-            <label className="label">Tolerância de desvio do preço comercial vs NTRP (%)</label>
-            <input type="number" className="input w-32" value={c.toleranciaNTRP} onChange={(e) => setC({ ...c, toleranciaNTRP: Number(e.target.value) })} />
-          </div>
+
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" className="accent-brand-600" checked={c.exigirModeracao} onChange={(e) => setC({ ...c, exigirModeracao: e.target.checked })} />
             Exigir moderação do gestor antes de publicar alterações no feed

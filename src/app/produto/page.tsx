@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { ArrowLeft, Download, Edit3, FileText, GitCompare, MapPin, Star, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Download, Edit3, FileText, GitCompare, MapPin, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -9,7 +9,7 @@ import { FeedItem } from "@/components/feed";
 import { AvisoRedeNacional, Kicker, nomeCurto, ProdutoCapa, RedeNacionalBadge, StatusBadge, tomSituacao } from "@/components/produto";
 import { CapaSolucao } from "@/components/solucao";
 import { Badge, Tabs, useAbaEstavel, Vazio } from "@/components/ui";
-import { brl, dataBR, desvioNTRP, precoBase, resumoCoparticipacao, formatarRegistro, pct, siglaSegmentacao, tipoPessoa } from "@/lib/ans";
+import { brl, dataBR, desvioNTRP, situacaoMargem, variacaoFaixas, precoBase, resumoCoparticipacao, formatarRegistro, pct, siglaSegmentacao, tipoPessoa } from "@/lib/ans";
 import { usePermissoes, useStore } from "@/lib/store";
 import { FAIXAS_ETARIAS, type PerfilVenda, type Produto, type TipoPrestador } from "@/lib/types";
 
@@ -151,48 +151,72 @@ function SeletorPerfil({ produto, perfil, onChange }: { produto: Produto; perfil
 function AbaPreco({ produto, perfil, onPerfil, irParaCopart }: {
   produto: Produto; perfil: PerfilVenda; onPerfil: (id: string) => void; irParaCopart: () => void;
 }) {
-  const tolerancia = useStore((s) => s.config.toleranciaNTRP) / 100;
   const desvios = desvioNTRP(perfil);
+  const margens = situacaoMargem(perfil);
+  const variacoes = variacaoFaixas(perfil.precoComercial);
   const preco = perfil.precoComercial;
+  const nt = perfil.notaTecnica;
   const semCopart = produto.fatorModerador === "Sem fator moderador" || perfil.coparticipacao.length === 0;
+  const fora = margens.filter((m) => m === "abaixo" || m === "acima").length;
   return (
     <div>
       <SeletorPerfil produto={produto} perfil={perfil} onChange={onPerfil} />
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
+            <tr className="text-left text-[11px] uppercase tracking-wide text-gray-400">
+              <th className="py-1" />
+              <th className="py-1 text-right" colSpan={2}>Preço comercial</th>
+              <th className="border-l border-gray-200 py-1 pl-4 text-center" colSpan={4}>Nota técnica (NTRP) · atuária</th>
+            </tr>
             <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
               <th className="py-2">Faixa etária</th>
-              <th className="py-2 text-right">Preço comercial</th>
+              <th className="py-2 text-right">Valor</th>
               <th className="py-2 text-right">Variação entre faixas</th>
-              <th className="py-2 text-right">Nota Técnica (NTRP)</th>
-              <th className="py-2 text-right">Desvio NTRP</th>
+              <th className="border-l border-gray-200 py-2 pl-4 text-right">T (sugerido)</th>
+              <th className="py-2 text-right">Margem inferior</th>
+              <th className="py-2 text-right">Margem superior</th>
+              <th className="py-2 text-right">Desvio vs T</th>
             </tr>
           </thead>
           <tbody>
             {FAIXAS_ETARIAS.map((f, i) => {
-              const fora = Math.abs(desvios[i]) > tolerancia;
+              const m = margens[i];
               return (
                 <tr key={f} className="border-b border-gray-100">
                   <td className="py-2 font-medium">{i + 1}ª · {f}</td>
-                  <td className="py-2 text-right font-semibold text-brand-800">{brl(preco[i])}</td>
+                  <td className={`py-2 text-right font-semibold ${m === "ok" || m === "sem" ? "text-brand-800" : "text-red-600"}`}>{brl(preco[i])}</td>
                   <td className="py-2 text-right">
-                    {i === 0 ? (
+                    {variacoes[i] === null ? (
                       <span className="text-gray-400">—</span>
                     ) : (
                       <>
-                        <span className="font-medium text-gray-700">+{pct(preco[i] / preco[i - 1] - 1)}</span>
+                        <span className="font-medium text-gray-700">+{pct(variacoes[i]!)}</span>
                         <span className="ml-2 text-xs text-gray-400">+{brl(preco[i] - preco[i - 1])}</span>
                       </>
                     )}
                   </td>
-                  <td className="py-2 text-right text-gray-600">{brl(perfil.precoNTRP[i])}</td>
-                  <td className={`py-2 text-right ${fora ? "font-semibold text-red-600" : "text-gray-500"}`}>{pct(desvios[i])}</td>
+                  <td className="border-l border-gray-100 py-2 pl-4 text-right text-gray-700">{brl(nt.t[i])}</td>
+                  <td className="py-2 text-right text-gray-500">{nt.inferior[i] ? brl(nt.inferior[i]) : "—"}</td>
+                  <td className="py-2 text-right text-gray-500">{nt.superior[i] ? brl(nt.superior[i]) : "—"}</td>
+                  <td className="py-2 text-right">
+                    <span className={m === "ok" || m === "sem" ? "text-gray-500" : "font-semibold text-red-600"}>{pct(desvios[i])}</span>
+                    {m === "ok" && <CheckCircle2 size={14} className="ml-1.5 inline text-brand-600" />}
+                    {(m === "abaixo" || m === "acima") && <span className="ml-1.5 text-[10px] font-bold uppercase text-red-600">{m} da margem</span>}
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+        <span>NTRP <strong className="text-gray-700">{nt.numero || "—"}</strong></span>
+        <span>Data-base <strong className="text-gray-700">{nt.dataBase ? nt.dataBase.split("-").reverse().join("/") : "—"}</strong></span>
+        <span>Atuário responsável <strong className="text-gray-700">{nt.atuario || "—"}</strong></span>
+        <span className={fora ? "font-semibold text-red-600" : "text-brand-700"}>
+          {fora ? `${fora} faixa(s) fora da margem da nota técnica` : "Preço comercial dentro das margens em todas as faixas"}
+        </span>
       </div>
 
       {/* Rodapé: perfil de coparticipação em resumo */}
@@ -213,8 +237,7 @@ function AbaPreco({ produto, perfil, onPerfil, irParaCopart }: {
         )}
       </div>
       <p className="mt-3 text-xs text-gray-500">
-        Valores mensais por beneficiário. Formação de preço: {produto.formacaoPreco}. Desvio destacado em vermelho quando acima da
-        tolerância interna de {(tolerancia * 100).toFixed(0)}% em relação à NTRP (parâmetro em Configurações).
+        Valores mensais por beneficiário. Formação de preço: {produto.formacaoPreco}. Variação entre faixas e desvio são calculados automaticamente.
       </p>
     </div>
   );

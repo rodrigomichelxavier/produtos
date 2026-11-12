@@ -68,6 +68,19 @@ export interface ItemCoparticipacao {
 }
 
 /**
+ * Nota Técnica de Registro de Produto (NTRP), elaborada pela atuária.
+ * Por faixa etária: T = preço sugerido; margens inferior e superior = faixa permitida para o preço comercial.
+ */
+export interface NotaTecnica {
+  numero: string; // identificação/protocolo da NTRP
+  dataBase: string; // mês/ano de referência (AAAA-MM)
+  atuario: string; // responsável técnico
+  t: number[]; // 10 faixas — preço sugerido (coluna T)
+  inferior: number[]; // 10 faixas — margem inferior
+  superior: number[]; // 10 faixas — margem superior
+}
+
+/**
  * Perfil de venda do produto: um mesmo produto pode ser vendido com perfis de coparticipação
  * diferentes (ex.: 30% e 50%). Cada perfil tem preço e códigos de sistema próprios.
  */
@@ -78,7 +91,7 @@ export interface PerfilVenda {
   coparticipacao: ItemCoparticipacao[];
   limiteGlobal?: LimiteGlobal;
   precoComercial: number[]; // 10 faixas
-  precoNTRP: number[]; // 10 faixas (Nota Técnica de Registro de Produto)
+  notaTecnica: NotaTecnica; // NTRP do perfil (T e margens calculados pela atuária)
 }
 
 export interface LimiteGlobal {
