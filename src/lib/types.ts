@@ -73,8 +73,17 @@ export const FAIXAS_ETARIAS = [
   "59 anos ou mais",
 ] as const;
 
+export const ICONES_PRODUTO = [
+  "broto", "casa", "familia", "coroa", "hospital", "maleta", "predio", "diamante",
+  "cracha", "graduacao", "escudo", "mapa", "relogio", "coracao", "globo",
+] as const;
+export type IconeProduto = (typeof ICONES_PRODUTO)[number];
+
 export interface Produto {
   id: string;
+  icone: IconeProduto; // ícone da arte de capa gerada
+  imagem?: string; // capa definida pelo marketing (data URL)
+  conceitoImagem?: string; // briefing/sugestão de imagem para o marketing
   registroANS: string; // nº de registro do produto na ANS (9 dígitos)
   nome: string;
   descricao: string;

@@ -140,7 +140,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: REG_A, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 189.9, ntrp: 182.4, coparticipacao: coparPadrao(30), limiteGlobal: { valor: 600, periodo: "Mensal" },
-    rede: ["h2", "h6", "h7", "pa1", "l1", "l3", "i1", "i4", "c1", "c4", "c8"], solucoes: ["s3", "s7", "s11"], cor: "#2e7d32", dias: 2,
+    rede: ["h2", "h6", "h7", "pa1", "l1", "l3", "i1", "i4", "c1", "c4", "c8"], solucoes: ["s3", "s7", "s11"], cor: "#2e7d32", icone: "broto", conceitoImagem: "Jovem casal sorrindo na varanda de casa, luz natural da manhã, fundo desfocado em verde suave. Mensagem: o primeiro plano, cuidado perto de casa.", dias: 2,
   }),
   prod({
     id: "p2", registroANS: "498765022", nome: "Aurora Essencial Apartamento",
@@ -148,7 +148,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: REG_A, acomodacao: "Apartamento (individual)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 229.5, ntrp: 221.0, coparticipacao: coparPadrao(30), limiteGlobal: { valor: 600, periodo: "Mensal" },
-    rede: ["h2", "h3", "h6", "h7", "pa1", "pa2", "l1", "l3", "i1", "i4", "c1", "c4", "c8"], solucoes: ["s2", "s3", "s7", "s11"], cor: "#388e3c", dias: 5,
+    rede: ["h2", "h3", "h6", "h7", "pa1", "pa2", "l1", "l3", "i1", "i4", "c1", "c4", "c8"], solucoes: ["s2", "s3", "s7", "s11"], cor: "#3d8b4f", icone: "casa", conceitoImagem: "Mãe e filho pequeno lendo juntos no sofá, ambiente claro e acolhedor, tons verde-oliva e madeira clara. Mensagem: conforto da família.", dias: 5,
   }),
   prod({
     id: "p3", registroANS: "498765033", nome: "Aurora Plus",
@@ -157,14 +157,14 @@ export const PRODUTOS: Produto[] = [
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
     preco: 389.0, ntrp: 372.8, coparticipacao: [],
     rede: ["h1", "h2", "h3", "h4", "h5", "h6", "h7", "h8", "pa1", "pa2", "pa3", "l1", "l2", "l3", "l4", "l5", "i1", "i2", "i4", "c1", "c2", "c3", "c4", "c5", "c6"],
-    solucoes: ["s1", "s2", "s3", "s5", "s7", "s9", "s14"], cor: "#1b5e20", dias: 1,
+    solucoes: ["s1", "s2", "s3", "s5", "s7", "s9", "s14"], cor: "#1b6e3a", icone: "familia", conceitoImagem: "Família de três gerações caminhando em parque arborizado ao entardecer, amplo espaço livre à esquerda para o título. Mensagem: rede completa na região.", dias: 1,
   }),
   prod({
     id: "p4", registroANS: "498765044", nome: "Aurora Prime Nacional",
     descricao: "Linha premium: toda a rede direta regional + Rede Nacional Master, com hospitais de excelência em todo o país. Sem coparticipação.",
     contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Nacional", redeNacional: "Master",
     areaAtuacao: NACIONAL, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
-    preco: 749.0, ntrp: 731.5, coparticipacao: [], rede: TODOS, solucoes: ["s1", "s2", "s3", "s4", "s5", "s7", "s8", "s9", "s10", "s14"], cor: "#0d3b12", dias: 3,
+    preco: 749.0, ntrp: 731.5, coparticipacao: [], rede: TODOS, solucoes: ["s1", "s2", "s3", "s4", "s5", "s7", "s8", "s9", "s10", "s14"], cor: "#12324f", icone: "coroa", conceitoImagem: "Mulher madura em saguão de aeroporto com mala de mão, olhar confiante, paleta azul-marinho com dourado discreto. Mensagem: padrão premium em todo o país.", dias: 3,
   }),
   prod({
     id: "p5", registroANS: "498765055", nome: "Aurora Hospitalar",
@@ -172,7 +172,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Individual/Familiar", segmentacao: "Hospitalar", abrangencia: "Grupo de Municípios",
     areaAtuacao: REG_A, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Sem fator moderador",
     situacaoANS: "Ativo com comercialização suspensa", statusComercial: "Fora de comercialização",
-    preco: 139.9, ntrp: 134.0, coparticipacao: [], rede: ["h2", "h6", "h7", "pa1"], solucoes: [], cor: "#558b2f", dias: 12,
+    preco: 139.9, ntrp: 134.0, coparticipacao: [], rede: ["h2", "h6", "h7", "pa1"], solucoes: [], cor: "#4b6b5a", icone: "hospital", conceitoImagem: "Detalhe de mãos dadas junto a leito hospitalar bem iluminado, foco suave, tons neutros e verde-acinzentado. Mensagem: segurança na internação.", dias: 12,
   }),
   prod({
     id: "p6", registroANS: "498765066", nome: "Aurora Empresarial Smart",
@@ -181,7 +181,7 @@ export const PRODUTOS: Produto[] = [
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 152.3, ntrp: 150.0, coparticipacao: coparPadrao(25), limiteGlobal: { valor: 5000, periodo: "Anual" },
     rede: ["h2", "h3", "h6", "h7", "h8", "pa1", "pa3", "l1", "l2", "l3", "l4", "l5", "l6", "i1", "i2", "i4", "c1", "c2", "c4", "c5", "c6", "c7"],
-    solucoes: ["s2", "s3", "s7", "s15"], cor: "#33691e", dias: 4,
+    solucoes: ["s2", "s3", "s7", "s15"], cor: "#0f5e6e", icone: "maleta", conceitoImagem: "Equipe pequena reunida em mesa de coworking, ambiente descontraído e luz natural, tons azul-petróleo. Mensagem: benefício acessível para PMEs.", dias: 4,
   }),
   prod({
     id: "p7", registroANS: "498765077", nome: "Aurora Empresarial Top",
@@ -190,14 +190,14 @@ export const PRODUTOS: Produto[] = [
     areaAtuacao: NACIONAL, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
     preco: 318.7, ntrp: 305.0, coparticipacao: [],
     rede: ["h1", "h2", "h3", "h4", "h5", "h6", "h7", "h8", "pa1", "pa2", "pa3", "l1", "l2", "l3", "l4", "i1", "i2", "i3", "i4", "c1", "c2", "c3", "c4"],
-    solucoes: ["s1", "s2", "s3", "s4", "s7", "s10", "s12"], cor: "#2e7d32", dias: 6,
+    solucoes: ["s1", "s2", "s3", "s4", "s7", "s10", "s12"], cor: "#1e3a8a", icone: "predio", conceitoImagem: "Profissionais em escritório moderno com vista para a cidade, em movimento, azul profundo com reflexos de vidro. Mensagem: empresa que valoriza o time.", dias: 6,
   }),
   prod({
     id: "p8", registroANS: "498765088", nome: "Aurora Executivo Nacional",
     descricao: "Plano coletivo empresarial para executivos: toda a rede direta + Rede Nacional Master e reembolso.",
     contratacao: "Coletivo Empresarial", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Nacional", redeNacional: "Master",
     areaAtuacao: NACIONAL, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
-    preco: 612.0, ntrp: 598.0, coparticipacao: [], rede: TODOS, solucoes: ["s1", "s2", "s3", "s4", "s5", "s7", "s8", "s10", "s12", "s13"], cor: "#1b5e20", dias: 9,
+    preco: 612.0, ntrp: 598.0, coparticipacao: [], rede: TODOS, solucoes: ["s1", "s2", "s3", "s4", "s5", "s7", "s8", "s10", "s12", "s13"], cor: "#0b2545", icone: "diamante", conceitoImagem: "Executivo(a) caminhando em saguão de aeroporto, silhueta contra janela ampla ao amanhecer, navy com acentos dourados. Mensagem: exclusividade e mobilidade.", dias: 9,
   }),
   prod({
     id: "p9", registroANS: "498765099", nome: "Aurora Adesão Profissional",
@@ -205,7 +205,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Coletivo por Adesão", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Apartamento (individual)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 244.0, ntrp: 236.9, coparticipacao: coparPadrao(35), limiteGlobal: { valor: 800, periodo: "Mensal" },
-    rede: ["h1", "h2", "h3", "h6", "h8", "pa1", "l1", "l2", "l3", "i1", "i2", "c1", "c2", "c3"], solucoes: ["s3", "s4", "s7", "s14"], cor: "#43a047", dias: 7,
+    rede: ["h1", "h2", "h3", "h6", "h8", "pa1", "l1", "l2", "l3", "i1", "i2", "c1", "c2", "c3"], solucoes: ["s3", "s4", "s7", "s14"], cor: "#5b3fa0", icone: "cracha", conceitoImagem: "Profissionais liberais (arquiteta, advogado) em seu ambiente de trabalho, retrato com fundo limpo, violeta suave. Mensagem: o plano da sua categoria.", dias: 7,
   }),
   prod({
     id: "p10", registroANS: "498765100", nome: "Aurora Adesão Universitário",
@@ -213,7 +213,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Coletivo por Adesão", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: ["Campinas/SP", "Hortolândia/SP", "Sumaré/SP"], acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação",
     statusComercial: "Em elaboração", preco: 129.0, ntrp: 125.5, coparticipacao: coparPadrao(20), limiteGlobal: { valor: 400, periodo: "Mensal" },
-    rede: ["h2", "h5", "pa1", "l1", "i1", "c1", "c3"], solucoes: ["s2", "s7", "s14"], cor: "#689f38", dias: 0,
+    rede: ["h2", "h5", "pa1", "l1", "i1", "c1", "c3"], solucoes: ["s2", "s7", "s14"], cor: "#7c4dcc", icone: "graduacao", conceitoImagem: "Estudantes conversando no campus com mochilas, energia jovem, violeta e lilás. Mensagem: primeiro plano, preço que cabe no bolso.", dias: 0,
   }),
   prod({
     id: "p11", registroANS: "498765111", nome: "Aurora Referência",
@@ -222,7 +222,7 @@ export const PRODUTOS: Produto[] = [
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
     preco: 198.0, ntrp: 191.0, coparticipacao: [],
     rede: ["h2", "h3", "h6", "h7", "h8", "h10", "pa1", "pa3", "l1", "l3", "l4", "l5", "i1", "i5", "c1", "c4", "c5", "c6", "c7"],
-    solucoes: ["s3", "s7"], cor: "#00796b", dias: 20,
+    solucoes: ["s3", "s7"], cor: "#0f766e", icone: "escudo", conceitoImagem: "Profissional de saúde acolhendo paciente em consultório claro, gesto de cuidado, teal suave. Mensagem: cobertura completa de referência.", dias: 20,
   }),
   prod({
     id: "p12", registroANS: "498765122", nome: "Aurora Nacional Básico",
@@ -230,7 +230,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Coletivo Empresarial", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Nacional", redeNacional: "Básica",
     areaAtuacao: NACIONAL, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
     preco: 209.0, ntrp: 203.0, coparticipacao: coparPadrao(25), limiteGlobal: { valor: 6000, periodo: "Anual" },
-    rede: ["h2", "h6", "h7", "h8", "pa1", "l1", "l3", "l4", "i1", "i4", "c1", "c4"], solucoes: ["s1", "s3", "s7", "s12"], cor: "#2e8b34", dias: 8,
+    rede: ["h2", "h6", "h7", "h8", "pa1", "l1", "l3", "l4", "i1", "i4", "c1", "c4"], solucoes: ["s1", "s3", "s7", "s12"], cor: "#1d4e89", icone: "mapa", conceitoImagem: "Mapa do Brasil em linhas finas com pontos de luz conectados, fundo azul profundo. Mensagem: proteção nacional para a sua empresa.", dias: 8,
   }),
   prod({
     id: "p13", registroANS: "498765133", nome: "Aurora Clássico 2019",
@@ -238,7 +238,7 @@ export const PRODUTOS: Produto[] = [
     contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: ["Campinas/SP", "Valinhos/SP"], acomodacao: "Enfermaria (coletiva)", fatorModerador: "Sem fator moderador",
     situacaoANS: "Cancelado", statusComercial: "Fora de comercialização",
-    preco: 275.0, ntrp: 260.0, coparticipacao: [], rede: ["h2", "l1", "i1", "c1"], solucoes: [], cor: "#757575", dias: 60,
+    preco: 275.0, ntrp: 260.0, coparticipacao: [], rede: ["h2", "l1", "i1", "c1"], solucoes: [], cor: "#6b7280", icone: "relogio", conceitoImagem: "Uso interno, sem campanha. Manter imagem neutra de arquivo.", dias: 60,
   }),
 ];
 

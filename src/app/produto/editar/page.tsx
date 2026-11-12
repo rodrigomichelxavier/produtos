@@ -1,17 +1,17 @@
 "use client";
 
-import { ArrowLeft, Info, Plus, Save, Trash2, Wand2 } from "lucide-react";
+import { ArrowLeft, ImagePlus, Info, Plus, Save, Trash2, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
-import { NIVEL_COR } from "@/components/produto";
+import { Suspense, useRef, useState } from "react";
+import { ICONES_PROD, NIVEL_COR, ProdutoCapa } from "@/components/produto";
 import { ListaRegras } from "@/components/regras";
 import { PageHeader, Vazio } from "@/components/ui";
 import { MUNICIPIOS_REGIAO } from "@/data/seed";
 import { brl, validarFaixasRN63 } from "@/lib/ans";
 import { usePermissoes, useStore } from "@/lib/store";
 import {
-  FAIXAS_ETARIAS, TIPOS_PRESTADOR, type Abrangencia, type Acomodacao, type FatorModerador, type FormacaoPreco,
+  FAIXAS_ETARIAS, ICONES_PRODUTO, TIPOS_PRESTADOR, type Abrangencia, type Acomodacao, type FatorModerador, type FormacaoPreco,
   type ItemCoparticipacao, type Produto, type RedeNacional, type Segmentacao, type SituacaoANS, type StatusComercial,
   type TipoContratacao,
 } from "@/lib/types";
@@ -49,6 +49,7 @@ const novoProduto = (): Produto => ({
   rede: [],
   solucoes: [],
   cor: "#2e7d32",
+  icone: "familia",
   atualizadoEm: new Date().toISOString(),
 });
 
@@ -69,6 +70,7 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
   const [p, setP] = useState<Produto>(inicial);
   const [reajuste, setReajuste] = useState(0);
   const [soArea, setSoArea] = useState(true);
+  const fotoRef = useRef<HTMLInputElement>(null);
   const prestadores = useStore((s) => s.prestadores);
   const solucoes = useStore((s) => s.solucoes);
   const salvar = useStore((s) => s.salvarProduto);
@@ -131,9 +133,59 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
           <Campo label="Descrição" className="md:col-span-3">
             <textarea className="input min-h-24" value={p.descricao} onChange={(e) => set("descricao", e.target.value)} />
           </Campo>
-          <Campo label="Cor do card">
-            <input type="color" className="h-10 w-20 cursor-pointer rounded-lg border" value={p.cor} onChange={(e) => set("cor", e.target.value)} />
-          </Campo>
+        </div>
+      </Secao>
+
+      <Secao titulo="Capa do produto">
+        <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
+          <div>
+            <div className="aspect-video overflow-hidden rounded-md shadow-lg ring-1 ring-black/10">
+              <ProdutoCapa produto={{ ...p, nome: p.nome || "Aurora Novo Produto" }} />
+            </div>
+            <div className="mt-2 flex gap-2">
+              <button type="button" className="btn-outline flex-1 py-1.5 text-xs" onClick={() => fotoRef.current?.click()}>
+                <ImagePlus size={14} /> {p.imagem ? "Trocar imagem" : "Enviar imagem do marketing"}
+              </button>
+              {p.imagem && <button type="button" className="btn-outline py-1.5 text-xs" onClick={() => set("imagem", undefined)}>Usar arte</button>}
+            </div>
+            <input ref={fotoRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && reduzirImagem(e.target.files[0], (url) => set("imagem", url))} />
+            <p className="mt-1 text-[11px] text-gray-400">Formato 16:9 (ajustado para 1280×720). Deixe espaço livre à esquerda para o nome.</p>
+          </div>
+          <div className="space-y-4">
+            {!p.imagem && (
+              <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+                <Campo label="Ícone da arte provisória">
+                  <div className="grid grid-cols-8 gap-1">
+                    {ICONES_PRODUTO.map((k) => {
+                      const { icon: I, rotulo } = ICONES_PROD[k];
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          title={rotulo}
+                          onClick={() => set("icone", k)}
+                          className={`flex aspect-square items-center justify-center rounded-md ring-1 transition ${p.icone === k ? "bg-accent text-white ring-accent" : "text-gray-500 ring-gray-200 hover:bg-gray-50"}`}
+                        >
+                          <I size={16} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Campo>
+                <Campo label="Cor da linha">
+                  <input type="color" className="h-10 w-20 cursor-pointer rounded-lg border border-gray-300" value={p.cor} onChange={(e) => set("cor", e.target.value)} />
+                </Campo>
+              </div>
+            )}
+            <Campo label="Sugestão de imagem para o marketing (briefing)">
+              <textarea
+                className="input min-h-24"
+                value={p.conceitoImagem ?? ""}
+                onChange={(e) => set("conceitoImagem", e.target.value)}
+                placeholder="Ex.: Família na varanda, luz natural da manhã, fundo desfocado em verde suave; espaço livre à esquerda para o título."
+              />
+            </Campo>
+          </div>
         </div>
       </Secao>
 
@@ -409,4 +461,17 @@ function Dica({ children }: { children: React.ReactNode }) {
       <Info size={16} className="shrink-0" /> {children}
     </div>
   );
+}
+
+function reduzirImagem(f: File, cb: (url: string) => void) {
+  const img = new Image();
+  img.onload = () => {
+    const w = 1280, h = 720;
+    const esc = Math.max(w / img.width, h / img.height);
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    c.getContext("2d")!.drawImage(img, (w - img.width * esc) / 2, (h - img.height * esc) / 2, img.width * esc, img.height * esc);
+    cb(c.toDataURL("image/jpeg", 0.82));
+  };
+  img.src = URL.createObjectURL(f);
 }

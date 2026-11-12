@@ -1,11 +1,12 @@
 "use client";
 
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, Edit3, ImagePlus, Info, Plus, Search, Trash2, X } from "lucide-react";
+import { Edit3, ImagePlus, Info, Plus, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProdutoCapa } from "@/components/produto";
 import { CapaSolucao, ICONES, tom } from "@/components/solucao";
+import { Fileira, ItemTop } from "@/components/streaming";
 import { Modal } from "@/components/ui";
 import { brl } from "@/lib/ans";
 import { usePermissoes, useStore } from "@/lib/store";
@@ -70,12 +71,7 @@ export default function SolucoesPage() {
         {ranking.length >= 3 && !busca && (
           <Fileira titulo={produtoFiltro ? `Top no ${produtoFiltro.nome}` : "Top soluções no portfólio"}>
             {ranking.map((s, i) => (
-              <button key={s.id} onClick={() => setAberta(s.id)} className="group relative flex shrink-0 snap-start items-end pl-2 text-left">
-                <span className="numero-top -mr-5 select-none text-[150px] transition group-hover:-translate-x-1">{i + 1}</span>
-                <div className="relative z-[1] aspect-[2/3] w-32 overflow-hidden rounded-md shadow-lg ring-1 ring-black/5 transition duration-300 group-hover:scale-105 sm:w-36">
-                  <CapaSolucao solucao={s} variante="poster" />
-                </div>
-              </button>
+              <ItemTop key={s.id} posicao={i + 1} onClick={() => setAberta(s.id)} poster={<CapaSolucao solucao={s} variante="poster" />} />
             ))}
           </Fileira>
         )}
@@ -174,34 +170,7 @@ function Hero({ destaques, qtd, total, onDetalhes }: {
   );
 }
 
-/* -------------------------------- Fileiras -------------------------------- */
-
-function Fileira({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const rolar = (dir: number) => ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.85, behavior: "smooth" });
-  return (
-    <section className="group/fileira relative">
-      <h2 className="px-4 text-lg font-bold text-gray-900 sm:px-6 lg:px-8">{titulo}</h2>
-      <div ref={ref} className="no-scrollbar flex snap-x gap-3 overflow-x-auto scroll-px-4 px-4 py-5 sm:scroll-px-6 sm:px-6 lg:scroll-px-8 lg:px-8">
-        {children}
-      </div>
-      <button
-        onClick={() => rolar(-1)}
-        aria-label="Anterior"
-        className="absolute bottom-5 left-0 top-12 z-20 hidden w-10 items-center justify-center bg-gradient-to-r from-page to-transparent text-gray-700 opacity-0 transition group-hover/fileira:opacity-100 md:flex"
-      >
-        <ChevronLeft size={30} />
-      </button>
-      <button
-        onClick={() => rolar(1)}
-        aria-label="Próximo"
-        className="absolute bottom-5 right-0 top-12 z-20 hidden w-10 items-center justify-center bg-gradient-to-l from-page to-transparent text-gray-700 opacity-0 transition group-hover/fileira:opacity-100 md:flex"
-      >
-        <ChevronRight size={30} />
-      </button>
-    </section>
-  );
-}
+/* --------------------------------- Cards --------------------------------- */
 
 function CardSolucao({ s, qtd, total, onClick }: { s: SolucaoAdicional; qtd: number; total: number; onClick: () => void }) {
   return (
@@ -318,8 +287,7 @@ function Detalhe({ s, onClose, onEditar }: { s: SolucaoAdicional; onClose: () =>
 function MiniProduto({ p }: { p: Produto }) {
   return (
     <Link href={`/produto/?id=${p.id}`} className="group overflow-hidden rounded-md bg-gray-50 ring-1 ring-gray-200 transition hover:ring-brand-400">
-      <ProdutoCapa produto={p} altura={56} />
-      <div className="p-2 text-xs font-semibold text-gray-800 group-hover:text-brand-700">{p.nome}</div>
+      <div className="aspect-video"><ProdutoCapa produto={p} /></div>
     </Link>
   );
 }

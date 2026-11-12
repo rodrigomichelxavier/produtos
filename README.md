@@ -8,9 +8,9 @@ construído para apresentação de solução. **Todos os dados são fictícios**
 | Módulo | O que tem |
 |---|---|
 | **Home** | Grandes números do portfólio (PF/PJ, ativos/inativos, nacional/regional, ticket médio) e gráficos |
-| **Portfólio** | Cards com filtros rotulados (PF/PJ, abrangência, segmentação, status, coparticipação), busca e destaque "+ Rede Nacional" |
+| **Portfólio** | Experiência estilo streaming: Todos / Pessoa Física / Pessoa Jurídica, menu **Características** (abrangência, rede nacional, contratação, segmentação, acomodação, coparticipação, status e soluções adicionais), banner de destaque, fileiras temáticas, Top 10 e "espiada" do produto |
 | **Produto** | Abas Preço (comercial × NTRP), Coparticipação (limites por classificação + limite global), rede direta por tipo de prestador, rede nacional, Soluções adicionais e Mais |
-| **Cadastro/edição** | Campos ANS, validação da **RN 63/2003** (faixas etárias), área de atuação na RMC, rede nacional (Básica/Especial/Master), rede direta e soluções permitidas |
+| **Cadastro/edição** | Capa do produto (imagem do marketing ou arte provisória + briefing de imagem), campos ANS, validação da **RN 63/2003** (faixas etárias), área de atuação na RMC, rede nacional (Básica/Especial/Master), rede direta e soluções permitidas |
 | **Soluções adicionais** | Cadastro de serviços extras (Aeromédica, TotalPass, Clube de Desconto, Seguro Viagem, Pet…) e em quais produtos podem ser vendidos |
 | **Comparativos** | Dois produtos lado a lado, só as diferenças, preço por faixa, rede nacional, rede direta "só em A / em ambos / só em B" e soluções |
 | **Materiais** | Kit de comunicação por produto (Uso interno / Uso externo), download e envio de arquivos com versionamento |

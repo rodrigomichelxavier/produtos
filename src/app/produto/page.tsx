@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { FeedItem } from "@/components/feed";
-import { AvisoRedeNacional, ProdutoCapa, RedeNacionalBadge, StatusBadge, tomSituacao } from "@/components/produto";
+import { AvisoRedeNacional, nomeCurto, ProdutoCapa, RedeNacionalBadge, StatusBadge, tomSituacao } from "@/components/produto";
 import { ListaRegras } from "@/components/regras";
 import { CapaSolucao } from "@/components/solucao";
 import { Badge, Tabs, Vazio } from "@/components/ui";
@@ -44,63 +44,70 @@ function ProdutoDetalhe() {
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Link href="/portfolio/" className="flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
-          <ArrowLeft size={16} /> Portfólio
-        </Link>
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/comparativos/?a=${produto.id}`} className="btn-outline"><GitCompare size={16} /> Comparar</Link>
-          <Link href={`/materiais/?produto=${produto.id}`} className="btn-outline"><FileText size={16} /> Materiais</Link>
-          {perm.editarProdutos && (
-            <Link href={`/produto/editar/?id=${produto.id}`} className="btn-primary"><Edit3 size={16} /> Editar</Link>
-          )}
-          {perm.moderar && (
-            <button
-              className="btn-outline text-red-600"
-              onClick={() => {
-                if (confirm(`Excluir "${produto.nome}" do portal? (somente na demo)`)) {
-                  excluir(produto.id);
-                  router.push("/portfolio/");
-                }
-              }}
-            >
-              <Trash2 size={16} />
-            </button>
-          )}
-        </div>
-      </div>
+      <section className="relative -mx-4 -mt-4 h-[460px] overflow-hidden bg-black sm:-mx-6 sm:-mt-6 lg:-mx-8 lg:-mt-8">
+        <div className="absolute inset-0"><ProdutoCapa produto={produto} variante="hero" titulo={false} /></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-page to-transparent" />
 
-      <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
-        <div className="card p-3">
-          <ProdutoCapa produto={produto} altura={200} />
-        </div>
-        <div className="card flex flex-col p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Registro ANS nº {formatarRegistro(produto.registroANS)}
-              </div>
-              <h1 className="text-2xl font-bold text-brand-900">{produto.nome}</h1>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <StatusBadge produto={produto} />
-              <Badge tom={tomSituacao(produto.situacaoANS)}>ANS: {produto.situacaoANS}</Badge>
-            </div>
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-5 sm:px-6 lg:px-8">
+          <Link href="/portfolio/" className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur hover:bg-black/60">
+            <ArrowLeft size={16} /> Portfólio
+          </Link>
+          <div className="flex gap-2">
+            <Link href={`/comparativos/?a=${produto.id}`} title="Comparar" className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white/60 bg-black/30 text-white hover:border-white"><GitCompare size={16} /></Link>
+            <Link href={`/materiais/?produto=${produto.id}`} title="Materiais" className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white/60 bg-black/30 text-white hover:border-white"><FileText size={16} /></Link>
+            {perm.moderar && (
+              <button
+                title="Excluir"
+                className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white/60 bg-black/30 text-white hover:border-red-400 hover:text-red-300"
+                onClick={() => {
+                  if (confirm(`Excluir "${produto.nome}" do portal? (somente na demo)`)) {
+                    excluir(produto.id);
+                    router.push("/portfolio/");
+                  }
+                }}
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
           </div>
-          <p className="mt-3 text-sm leading-relaxed text-gray-600">{produto.descricao}</p>
-          <div className="mt-auto flex flex-wrap items-center gap-2 pt-5">
-            <Chip>{tipoPessoa(produto.contratacao)} · {produto.contratacao}</Chip>
-            <Chip>{produto.abrangencia}</Chip>
+        </div>
+
+        <div className="relative flex h-full max-w-3xl flex-col justify-end px-4 pb-14 text-white sm:px-6 lg:px-8">
+          <div className="text-xs font-semibold uppercase tracking-[0.25em] text-white/70">
+            Registro ANS nº {formatarRegistro(produto.registroANS)}
+          </div>
+          <div className="mt-1 text-sm font-semibold uppercase tracking-[0.4em] text-white/70">Aurora</div>
+          <h1 className="font-display text-6xl uppercase leading-[0.85] tracking-wide drop-shadow-lg sm:text-7xl">{nomeCurto(produto)}</h1>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <StatusBadge produto={produto} />
+            <Badge tom={tomSituacao(produto.situacaoANS)}>ANS: {produto.situacaoANS}</Badge>
             <RedeNacionalBadge produto={produto} grande />
-            <Chip>{siglaSegmentacao(produto.segmentacao)}</Chip>
-            <Chip>{produto.acomodacao}</Chip>
-            <Chip>{produto.fatorModerador}</Chip>
-            <Chip>1ª faixa – {brl(produto.precoComercial[0])}</Chip>
+          </div>
+          <p className="mt-3 line-clamp-2 max-w-2xl text-sm text-white/85 sm:text-base">{produto.descricao}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/85">
+            <span>{tipoPessoa(produto.contratacao)} · {produto.contratacao}</span>
+            <span className="text-white/40">•</span>
+            <span>{produto.abrangencia}</span>
+            <span className="text-white/40">•</span>
+            <span>{siglaSegmentacao(produto.segmentacao)}</span>
+            <span className="text-white/40">•</span>
+            <span>{produto.acomodacao}</span>
+            <span className="text-white/40">•</span>
+            <span>{produto.fatorModerador}</span>
+          </div>
+          <div className="mt-5 flex flex-wrap items-center gap-4">
+            {perm.editarProdutos && (
+              <Link href={`/produto/editar/?id=${produto.id}`} className="inline-flex items-center gap-2 rounded-md bg-white px-5 py-2.5 text-sm font-bold text-black hover:bg-white/80">
+                <Edit3 size={16} /> Editar produto
+              </Link>
+            )}
+            <span className="text-sm text-white/80">a partir de <strong className="text-lg text-white">{brl(produto.precoComercial[0])}</strong>/mês</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="card mt-5 p-0">
+      <div className="card relative z-10 -mt-6 p-0">
         <div className="px-4 pt-2"><Tabs abas={ABAS} ativa={aba} onChange={setAba} contagem={contagem} /></div>
         <div className="p-6">
           {aba === "Preço" && <AbaPreco produto={produto} />}
@@ -112,10 +119,6 @@ function ProdutoDetalhe() {
       </div>
     </>
   );
-}
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return <span className="rounded-lg border border-brand-300 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-800">{children}</span>;
 }
 
 function AbaPreco({ produto }: { produto: Produto }) {
