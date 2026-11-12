@@ -129,6 +129,10 @@ function diffProduto(antes: Produto, depois: Produto, prestadores: Prestador[], 
     .filter(([k]) => JSON.stringify(antes[k]) !== JSON.stringify(depois[k]))
     .map(([k, label]) => (k === "descricao" ? `${label} atualizada` : `${label}: ${String(antes[k])} → ${String(depois[k])}`));
   if (JSON.stringify(antes.areaAtuacao) !== JSON.stringify(depois.areaAtuacao)) cad.push("Área de atuação atualizada");
+  const codInc = depois.codigos.filter((c) => !antes.codigos.includes(c));
+  const codExc = antes.codigos.filter((c) => !depois.codigos.includes(c));
+  if (codInc.length) cad.push(`Códigos incluídos: ${codInc.join(", ")}`);
+  if (codExc.length) cad.push(`Códigos removidos: ${codExc.join(", ")}`);
   if (cad.length) out.push({ tipo: "Cadastro", titulo: "Atualização cadastral", detalhes: cad });
 
   return out;
@@ -296,7 +300,7 @@ export const useStore = create<State>()(
     {
       name: "portal-produtos-demo",
       storage: createJSONStorage(() => armazenamentoSeguro),
-      version: 7,
+      version: 8,
       // Dados de versões anteriores do protótipo são descartados.
       // Dados fictícios são renovados, mas usuários (fotos, nomes, perfis) e a configuração são preservados.
       migrate: (antigo) => {

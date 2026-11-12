@@ -100,6 +100,7 @@ export interface Produto {
   nome: string;
   descricao: string;
   linha: Linha;
+  codigos: string[]; // códigos usados nos sistemas internos: 4 letras + 2 números (4 a 10 por produto)
   vendasMes?: number; // vidas vendidas no último mês (indicador comercial)
   contratacao: TipoContratacao;
   segmentacao: Segmentacao;
@@ -201,3 +202,8 @@ export interface Configuracoes {
   toleranciaNTRP: number; // % de desvio aceito entre preço comercial e NTRP
   exigirModeracao: boolean;
 }
+
+/** Códigos de sistema: 4 letras + 2 números (ex.: PLUS01). */
+export const REGEX_CODIGO = /^[A-Z]{4}\d{2}$/;
+export const MIN_CODIGOS = 4;
+export const MAX_CODIGOS = 10;

@@ -80,7 +80,7 @@ export default function PortfolioPage() {
   const filtrando = sel.length > 0 || busca.trim().length > 0;
   const resultado = aplicar(doPublico, sel).filter((p) => {
     const q = busca.trim().toLowerCase();
-    return !q || p.nome.toLowerCase().includes(q) || p.registroANS.includes(q.replace(/\D/g, "") || "§");
+    return !q || p.nome.toLowerCase().includes(q) || p.registroANS.includes(q.replace(/\D/g, "") || "§") || p.codigos.some((c) => c.toLowerCase().includes(q));
   });
 
   const vendaveis = doPublico.filter((p) => p.statusComercial === "Em comercialização");
@@ -358,7 +358,7 @@ function BuscaExpansivel({ valor, onChange }: { valor: string; onChange: (v: str
           value={valor}
           onChange={(e) => onChange(e.target.value)}
           onBlur={() => !valor && setAberta(false)}
-          placeholder="Nome ou registro ANS"
+          placeholder="Nome, registro ANS ou código"
           className="w-full bg-transparent pr-2 text-sm text-white placeholder:text-white/50 focus:outline-none"
         />
       )}

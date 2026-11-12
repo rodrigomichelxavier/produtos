@@ -7,7 +7,7 @@ import { Suspense, useState } from "react";
 import { FeedItem } from "@/components/feed";
 import { AvisoRedeNacional, Kicker, nomeCurto, ProdutoCapa, RedeNacionalBadge, StatusBadge, tomSituacao } from "@/components/produto";
 import { CapaSolucao } from "@/components/solucao";
-import { Badge, Tabs, Vazio } from "@/components/ui";
+import { Badge, Tabs, useAbaEstavel, Vazio } from "@/components/ui";
 import { brl, dataBR, desvioNTRP, formatarRegistro, pct, siglaSegmentacao, tipoPessoa } from "@/lib/ans";
 import { usePermissoes, useStore } from "@/lib/store";
 import { FAIXAS_ETARIAS, type Produto, type TipoPrestador } from "@/lib/types";
@@ -28,7 +28,7 @@ function ProdutoDetalhe() {
   const id = useSearchParams().get("id");
   const produto = useStore((s) => s.produtos.find((p) => p.id === id));
   const prestadores = useStore((s) => s.prestadores);
-  const [aba, setAba] = useState<Aba>("Preço");
+  const { aba, setAba, conteudoRef, estiloConteudo } = useAbaEstavel<Aba>("Preço");
   const perm = usePermissoes();
   const excluir = useStore((s) => s.excluirProduto);
   const router = useRouter();
@@ -108,7 +108,7 @@ function ProdutoDetalhe() {
 
       <div className="card relative z-10 -mt-6 p-0">
         <div className="px-4 pt-2"><Tabs abas={ABAS} ativa={aba} onChange={setAba} contagem={contagem} /></div>
-        <div className="p-6">
+        <div ref={conteudoRef} style={estiloConteudo} className="p-6">
           {aba === "Preço" && <AbaPreco produto={produto} />}
           {aba === "Perfil de Coparticipação" && <AbaCopart produto={produto} />}
           {ABA_TIPO[aba] && <AbaRede produto={produto} tipo={ABA_TIPO[aba]!} />}
@@ -287,6 +287,8 @@ function AbaMais({ produto }: { produto: Produto }) {
             </div>
           ))}
         </dl>
+        <h3 className="mb-2 mt-6 font-bold text-brand-900">Códigos usados no sistema</h3>
+        <CodigosSistema codigos={produto.codigos} />
         <h3 className="mb-2 mt-6 font-bold text-brand-900">Área de atuação</h3>
         <div className="flex flex-wrap gap-2">
           {produto.areaAtuacao.map((a) => <Badge key={a} tom="verde">{a}</Badge>)}
@@ -304,6 +306,35 @@ function AbaMais({ produto }: { produto: Produto }) {
           {alteracoes.length ? alteracoes.map((a) => <FeedItem key={a.id} alteracao={a} />) : <Vazio texto="Sem alterações publicadas." />}
         </div>
       </div>
+    </div>
+  );
+}
+
+function CodigosSistema({ codigos }: { codigos: string[] }) {
+  const [copiado, setCopiado] = useState("");
+  const copiar = (texto: string) => {
+    navigator.clipboard?.writeText(texto).catch(() => {});
+    setCopiado(texto);
+    window.setTimeout(() => setCopiado(""), 1500);
+  };
+  if (!codigos.length) return <p className="text-sm text-gray-500">Nenhum código cadastrado.</p>;
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2">
+        {codigos.map((c) => (
+          <button
+            key={c}
+            onClick={() => copiar(c)}
+            title="Clique para copiar"
+            className="rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1 font-mono text-sm font-semibold tracking-wider text-gray-800 transition hover:border-brand-300 hover:bg-brand-50"
+          >
+            {copiado === c ? "Copiado!" : c}
+          </button>
+        ))}
+      </div>
+      <button onClick={() => copiar(codigos.join(", "))} className="mt-2 text-xs font-semibold text-brand-700 hover:underline">
+        {copiado === codigos.join(", ") ? "Todos copiados!" : "Copiar todos"}
+      </button>
     </div>
   );
 }

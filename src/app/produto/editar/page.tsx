@@ -11,7 +11,7 @@ import { MUNICIPIOS_REGIAO } from "@/data/seed";
 import { brl, validarFaixasRN63 } from "@/lib/ans";
 import { locaisPrestador, usePermissoes, useStore } from "@/lib/store";
 import {
-  FAIXAS_ETARIAS, ICONES_PRODUTO, LINHAS, TIPOS_PRESTADOR, type Linha, type Abrangencia, type Acomodacao, type FatorModerador, type FormacaoPreco,
+  FAIXAS_ETARIAS, ICONES_PRODUTO, LINHAS, MAX_CODIGOS, MIN_CODIGOS, REGEX_CODIGO, TIPOS_PRESTADOR, type Linha, type Abrangencia, type Acomodacao, type FatorModerador, type FormacaoPreco,
   type ItemCoparticipacao, type Produto, type RedeNacional, type Segmentacao, type SituacaoANS, type StatusComercial,
   type TipoContratacao,
 } from "@/lib/types";
@@ -35,6 +35,7 @@ const novoProduto = (): Produto => ({
   nome: "",
   descricao: "",
   linha: "Intermediário",
+  codigos: [],
   contratacao: "Individual/Familiar",
   segmentacao: "Ambulatorial + Hospitalar com Obstetrícia",
   abrangencia: "Grupo de Municípios",
@@ -73,6 +74,10 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
   const [soArea, setSoArea] = useState(true);
   const fotoRef = useRef<HTMLInputElement>(null);
   const prestadores = useStore((s) => s.prestadores);
+  const todosProdutos = useStore((s) => s.produtos);
+  const codigosEmOutros = new Map(
+    todosProdutos.filter((x) => x.id !== inicial.id).flatMap((x) => x.codigos.map((c) => [c, x.nome] as const)),
+  );
   const solucoes = useStore((s) => s.solucoes);
   const salvar = useStore((s) => s.salvarProduto);
   const moderacao = useStore((s) => s.config.exigirModeracao);
@@ -83,6 +88,7 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
   const regDigitos = p.registroANS.replace(/\D/g, "");
   const erros = [
     !p.nome.trim() && "Informe o nome comercial do produto.",
+    (p.codigos.length < MIN_CODIGOS || p.codigos.length > MAX_CODIGOS) && `Informe de ${MIN_CODIGOS} a ${MAX_CODIGOS} códigos usados no sistema (hoje: ${p.codigos.length}).`,
     regDigitos.length !== 9 && "O nº de registro ANS do produto deve ter 9 dígitos.",
     !regrasPreco.every((r) => r.ok) && "A tabela de preços não atende à RN 63/2003.",
     p.abrangencia === "Nacional" && p.contratacao === "Individual/Familiar" && "Planos Pessoa Física não podem ter abrangência nacional (regra de negócio).",
@@ -148,6 +154,9 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
           </Campo>
           <Campo label="Descrição" className="md:col-span-3">
             <textarea className="input min-h-24" value={p.descricao} onChange={(e) => set("descricao", e.target.value)} />
+          </Campo>
+          <Campo label={`Códigos usados no sistema (${p.codigos.length} de ${MIN_CODIGOS} a ${MAX_CODIGOS})`} className="md:col-span-3">
+            <CodigosInput codigos={p.codigos} onChange={(c) => set("codigos", c)} emUso={codigosEmOutros} />
           </Campo>
         </div>
       </Secao>
@@ -501,4 +510,55 @@ function reduzirImagem(f: File, cb: (url: string) => void) {
     cb(c.toDataURL("image/jpeg", 0.82));
   };
   img.src = URL.createObjectURL(f);
+}
+
+/** Campo de códigos (4 letras + 2 números), adicionados com Enter, vírgula ou espaço. */
+function CodigosInput({ codigos, onChange, emUso }: { codigos: string[]; onChange: (c: string[]) => void; emUso: Map<string, string> }) {
+  const [texto, setTexto] = useState("");
+  const [erro, setErro] = useState("");
+  const adicionar = (bruto: string) => {
+    const novos = bruto.toUpperCase().split(/[\s,;]+/).filter(Boolean);
+    if (!novos.length) return;
+    let lista = [...codigos];
+    for (const c of novos) {
+      if (!REGEX_CODIGO.test(c)) return setErro(`"${c}" inválido: use 4 letras + 2 números (ex.: PLUS01).`);
+      if (lista.includes(c)) return setErro(`${c} já está na lista.`);
+      if (emUso.has(c)) return setErro(`${c} já é usado em ${emUso.get(c)}.`);
+      if (lista.length >= MAX_CODIGOS) return setErro(`Máximo de ${MAX_CODIGOS} códigos por produto.`);
+      lista = [...lista, c];
+    }
+    onChange(lista);
+    setTexto("");
+    setErro("");
+  };
+  return (
+    <div>
+      <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border border-gray-300 bg-surface px-2 py-1.5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100">
+        {codigos.map((c) => (
+          <span key={c} className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 font-mono text-sm font-semibold tracking-wider text-gray-800">
+            {c}
+            <button type="button" onClick={() => onChange(codigos.filter((x) => x !== c))} className="text-gray-400 hover:text-red-500" aria-label={`Remover ${c}`}>×</button>
+          </span>
+        ))}
+        {codigos.length < MAX_CODIGOS && (
+          <input
+            value={texto}
+            maxLength={60}
+            onChange={(e) => { setTexto(e.target.value.toUpperCase()); setErro(""); }}
+            onKeyDown={(e) => {
+              if (["Enter", ",", " ", "Tab"].includes(e.key) && texto.trim()) { e.preventDefault(); adicionar(texto); }
+              if (e.key === "Backspace" && !texto && codigos.length) onChange(codigos.slice(0, -1));
+            }}
+            onBlur={() => texto.trim() && adicionar(texto)}
+            onPaste={(e) => { e.preventDefault(); adicionar(e.clipboardData.getData("text")); }}
+            placeholder={codigos.length ? "" : "Ex.: PLUS01 — Enter para adicionar"}
+            className="min-w-32 flex-1 bg-transparent px-1 font-mono text-sm uppercase tracking-wider outline-none placeholder:normal-case placeholder:tracking-normal"
+          />
+        )}
+      </div>
+      <p className={`mt-1 text-xs ${erro ? "text-red-600" : "text-gray-400"}`}>
+        {erro || "4 letras + 2 números. Enter, vírgula ou espaço para adicionar; cole vários de uma vez."}
+      </p>
+    </div>
+  );
 }

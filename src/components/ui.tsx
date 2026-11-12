@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 export function PageHeader({ titulo, subtitulo, acoes }: { titulo: string; subtitulo?: string; acoes?: ReactNode }) {
   return (
@@ -128,4 +128,30 @@ export function Avatar({ nome, foto, tamanho = 36 }: { nome: string; foto?: stri
       {iniciais}
     </span>
   );
+}
+
+/**
+ * Troca de abas sem "pular" a página: guarda a rolagem e mantém a altura da área de conteúdo
+ * no momento da troca, evitando que o navegador reposicione a tela quando a nova aba é mais curta.
+ */
+export function useAbaEstavel<T extends string>(inicial: T) {
+  const [aba, setAbaInterna] = useState<T>(inicial);
+  const conteudoRef = useRef<HTMLDivElement>(null);
+  const rolagem = useRef<number | null>(null);
+  const [alturaMin, setAlturaMin] = useState<number | undefined>();
+
+  const setAba = (nova: T) => {
+    rolagem.current = window.scrollY;
+    setAlturaMin(conteudoRef.current?.offsetHeight);
+    setAbaInterna(nova);
+  };
+
+  useLayoutEffect(() => {
+    if (rolagem.current !== null) {
+      window.scrollTo({ top: rolagem.current });
+      rolagem.current = null;
+    }
+  }, [aba]);
+
+  return { aba, setAba, conteudoRef, estiloConteudo: { minHeight: alturaMin } };
 }
