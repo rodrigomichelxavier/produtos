@@ -2,12 +2,13 @@
 
 import clsx from "clsx";
 import {
-  Bell, Box, FolderOpen, GitCompare, Home, LayoutGrid, Menu, Moon, Network, Puzzle, Settings, Sun, Users, X,
+  Bell, Box, FolderOpen, GitCompare, Home, LayoutGrid, Menu, Network, Puzzle, Settings, Users, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { PERMISSOES, useStore, useUsuarioAtual } from "@/lib/store";
+import { ThemeIconButton, ThemeSwitch } from "./ThemeToggle";
 import { Avatar } from "./ui";
 
 const NAV = [
@@ -21,17 +22,6 @@ const NAV = [
   { href: "/usuarios/", label: "Usuários", icon: Users },
   { href: "/configuracoes/", label: "Configurações", icon: Settings },
 ];
-
-function useTema() {
-  const [escuro, setEscuro] = useState(() => document.documentElement.classList.contains("dark"));
-  const alternar = () => {
-    const novo = !escuro;
-    document.documentElement.classList.toggle("dark", novo);
-    try { localStorage.setItem("tema", novo ? "escuro" : "claro"); } catch {}
-    setEscuro(novo);
-  };
-  return { escuro, alternar };
-}
 
 export default function AppShell({ children }: { children: ReactNode }) {
   // Os dados ficam no localStorage: renderiza só no cliente para evitar divergência de hidratação.
@@ -51,7 +41,6 @@ function Shell({ children }: { children: ReactNode }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const perm = PERMISSOES[usuario.perfil];
   const podeModerar = perm.moderar;
-  const { escuro, alternar } = useTema();
   const pendentes = alteracoes.filter((a) => a.status === "Pendente").length;
   const recentes = alteracoes.filter(
     (a) => a.status === "Publicada" && Date.now() - new Date(a.data).getTime() < 7 * 86400000,
@@ -77,14 +66,6 @@ function Shell({ children }: { children: ReactNode }) {
             <div className="text-xs text-white/60">Aurora Saúde · protótipo</div>
           </div>
           <button className="ml-auto lg:hidden" onClick={() => setMenuAberto(false)} aria-label="Fechar menu"><X /></button>
-        </div>
-        <div className="px-6 pb-4">
-          <button
-            onClick={alternar}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 hover:bg-white/15"
-          >
-            {escuro ? <Sun size={14} /> : <Moon size={14} />} {escuro ? "Modo claro" : "Modo escuro"}
-          </button>
         </div>
         <nav className="flex-1 space-y-1 px-3">
           {NAV.filter((n) => !n.restrito || perm[n.restrito]).map(({ href, label, icon: Icon }) => (
@@ -114,6 +95,10 @@ function Shell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="border-t border-white/10 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-white/60">Aparência</span>
+            <ThemeSwitch />
+          </div>
           <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/60">
             Simular perfil (demo)
           </label>
@@ -144,6 +129,7 @@ function Shell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-gray-200 bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
           <button onClick={() => setMenuAberto(true)} aria-label="Abrir menu"><Menu /></button>
           <span className="font-bold text-brand-800">Portal de Produtos</span>
+          <span className="ml-auto"><ThemeIconButton /></span>
         </header>
         <div className="bg-amber-50 px-6 py-1.5 text-center text-xs text-amber-800 dark:bg-amber-100">
           Protótipo para apresentação · todos os dados são fictícios · alterações ficam salvas apenas neste navegador
