@@ -46,13 +46,19 @@ export const COR_LINHA: Record<Produto["linha"], string> = {
   Superior: "#fbbf24",
 };
 
-/** Linha superior do título nas capas: "AURORA · SUPERIOR". */
-export function Kicker({ produto, className }: { produto: Produto; className?: string }) {
+/** Linha acima do título nas capas: a classificação do produto (ex.: "• SUPERIOR"). */
+export function Kicker({ produto, compacto, className }: { produto: Produto; compacto?: boolean; className?: string }) {
   return (
-    <div className={clsx("flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70", className)}>
-      Aurora
-      <span className="h-1 w-1 rounded-full" style={{ background: COR_LINHA[produto.linha] }} />
-      <span style={{ color: COR_LINHA[produto.linha] }}>{produto.linha}</span>
+    <div
+      className={clsx(
+        "flex items-center gap-1.5 font-bold uppercase",
+        compacto ? "text-[9px] tracking-[0.14em]" : "text-[10px] tracking-[0.28em]",
+        className,
+      )}
+      style={{ color: COR_LINHA[produto.linha] }}
+    >
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: COR_LINHA[produto.linha] }} />
+      <span className="truncate">{produto.linha}</span>
     </div>
   );
 }
@@ -120,7 +126,7 @@ export function ProdutoCapa({
           {selos && foraDeVenda && (
             <span className="mb-1 inline-block rounded-sm bg-black/70 px-1.5 py-px text-[9px] font-extrabold uppercase tracking-wider text-white">Fora de venda</span>
           )}
-          <Kicker produto={produto} />
+          <Kicker produto={produto} compacto={variante === "poster"} />
           <div
             className={clsx(
               "font-display uppercase leading-[0.9] tracking-wide text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]",

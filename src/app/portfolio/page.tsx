@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { Check, ChevronDown, Edit3, GitCompare, Info, Play, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Kicker, LinhaSelo, nomeCurto, NIVEL_COR, ProdutoCapa } from "@/components/produto";
+import { Kicker, nomeCurto, NIVEL_COR, ProdutoCapa } from "@/components/produto";
 import { CapaSolucao, tom } from "@/components/solucao";
 import { CardStreaming, Fileira, ItemTop, JanelaDetalhe } from "@/components/streaming";
 import { brl, siglaSegmentacao, tipoPessoa } from "@/lib/ans";
@@ -106,7 +106,7 @@ export default function PortfolioPage() {
     { titulo: "Em breve", subtitulo: "em elaboração", lista: doPublico.filter((p) => p.statusComercial === "Em elaboração") },
     { titulo: "Fora de venda", lista: doPublico.filter((p) => p.statusComercial === "Fora de comercialização") },
   ];
-  const top = [...vendaveis].sort((a, b) => b.rede.length - a.rede.length).slice(0, 10);
+  const top = [...vendaveis].filter((p) => (p.vendasMes ?? 0) > 0).sort((a, b) => (b.vendasMes ?? 0) - (a.vendasMes ?? 0)).slice(0, 10);
 
   return (
     <div className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6 lg:-mx-8 lg:-mt-8">
@@ -181,7 +181,7 @@ export default function PortfolioPage() {
             </Fileira>
           ))}
           {top.length >= 3 && (
-            <Fileira titulo={`Top ${top.length} · maior rede credenciada`}>
+            <Fileira titulo={`Top ${top.length} · mais vendidos`} subtitulo="vidas vendidas no último mês">
               {top.map((p, i) => (
                 <ItemTop key={p.id} posicao={i + 1} onClick={() => setAberto(p.id)} poster={<ProdutoCapa produto={p} variante="poster" />} />
               ))}
@@ -235,7 +235,7 @@ function Hero({ lista, onMais }: { lista: Produto[]; onMais: (id: string) => voi
         <h2 className="font-display text-6xl uppercase leading-[0.85] tracking-wide drop-shadow-lg sm:text-7xl xl:text-8xl">{nomeCurto(atual)}</h2>
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
           <span className="font-semibold text-emerald-300">{atual.statusComercial}</span>
-          <LinhaSelo produto={atual} />
+          <span className="text-white/40">•</span>
           <span>{atual.contratacao}</span>
           <span className="text-white/40">•</span>
           <span>{siglaSegmentacao(atual.segmentacao)}</span>
@@ -439,8 +439,8 @@ function Espiada({ p, onClose, onAbrir }: { p: Produto; onClose: () => void; onA
         <div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
             <span className={clsx("font-semibold", p.statusComercial === "Em comercialização" ? "text-emerald-600" : "text-gray-500")}>{p.statusComercial}</span>
-            <LinhaSelo produto={p} fundoClaro />
             <span className="rounded border border-gray-300 px-1.5 text-xs text-gray-600">{tipoPessoa(p.contratacao)}</span>
+            {!!p.vendasMes && <span className="text-xs text-gray-500">{p.vendasMes.toLocaleString("pt-BR")} vidas vendidas no mês</span>}
             <span className="text-gray-600">{siglaSegmentacao(p.segmentacao)}</span>
             {p.redeNacional && (
               <span className="rounded px-1.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-white" style={{ background: NIVEL_COR[p.redeNacional] }}>

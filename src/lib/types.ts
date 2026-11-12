@@ -92,6 +92,7 @@ export interface Produto {
   nome: string;
   descricao: string;
   linha: Linha;
+  vendasMes?: number; // vidas vendidas no último mês (indicador comercial)
   contratacao: TipoContratacao;
   segmentacao: Segmentacao;
   abrangencia: Abrangencia;

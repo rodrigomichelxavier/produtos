@@ -64,95 +64,106 @@ function Shell({ children }: { children: ReactNode }) {
     href === "/" ? pathname === "/" : pathname.startsWith(href) || (href === "/portfolio/" && pathname.startsWith("/produto"));
 
   // No desktop o menu pode ser recolhido clicando no logo (preferência salva no navegador).
+  // Os ícones mantêm a mesma posição; só a largura anima e os textos esmaecem.
   const r = recolhido;
-  const some = r ? "lg:hidden" : "";
+  const texto = clsx("whitespace-nowrap transition-opacity duration-200", r ? "lg:pointer-events-none lg:opacity-0" : "opacity-100 delay-100");
   const badge = podeModerar ? pendentes : recentes;
+  const EASE = "duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]";
 
   return (
     <div className="flex min-h-screen">
       <aside
         className={clsx(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-y-auto overflow-x-hidden bg-sidebar text-white transition-[transform,width] duration-300 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-y-auto overflow-x-hidden bg-sidebar text-white transition-[transform,width] will-change-[width] lg:translate-x-0",
+          EASE,
           menuAberto ? "translate-x-0" : "-translate-x-full",
           r && "lg:w-[76px]",
         )}
       >
-        <div className={clsx("flex items-center gap-3 py-6", r ? "px-6 lg:justify-center lg:px-0" : "px-6")}>
+        <div className="flex items-center gap-3 py-6 pl-[17px] pr-4">
           <button
             onClick={alternarMenu}
             aria-label={r ? "Expandir menu" : "Recolher menu"}
             title={r ? "Expandir menu" : "Recolher menu"}
-            className="group/logo relative shrink-0 rounded-xl bg-white/15 p-2 transition hover:bg-white/25 lg:cursor-pointer"
+            className="group/logo shrink-0 rounded-xl bg-white/15 p-2 transition hover:bg-white/25"
           >
             <Box size={26} className="transition-transform duration-300 group-hover/logo:scale-90" />
           </button>
-          <div className={clsx("min-w-0 whitespace-nowrap", some)}>
+          <div className={clsx("min-w-0", texto)}>
             <div className="text-base font-bold leading-tight">Portal de Produtos</div>
             <div className="text-xs text-white/60">Aurora Saúde · protótipo</div>
           </div>
           <button className="ml-auto lg:hidden" onClick={() => setMenuAberto(false)} aria-label="Fechar menu"><X /></button>
         </div>
-        <nav className={clsx("flex-1 space-y-1", r ? "px-3 lg:px-3.5" : "px-3")}>
+        <nav className="flex-1 space-y-1 px-3">
           {NAV.filter((n) => !n.restrito || perm[n.restrito]).map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               title={r ? label : undefined}
               className={clsx(
-                "relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition",
-                r && "lg:justify-center lg:px-0",
+                "relative flex items-center gap-3 overflow-hidden rounded-xl px-[17px] py-2.5 text-sm font-medium transition-colors",
                 ativo(href) ? "bg-surface text-brand-800 shadow" : "text-white/90 hover:bg-white/10",
               )}
             >
               <Icon size={18} className="shrink-0" />
-              <span className={clsx("whitespace-nowrap", some)}>{label}</span>
+              <span className={texto}>{label}</span>
               {label === "Notificações" && badge > 0 && (
                 <>
                   <span
                     className={clsx(
                       "ml-auto rounded-full px-2 py-0.5 text-xs font-bold",
                       podeModerar ? "bg-amber-400 text-amber-950" : "bg-brand-400 text-white",
-                      some,
+                      texto,
                     )}
                     title={podeModerar ? "Alterações aguardando moderação" : "Novidades nos últimos 7 dias"}
                   >
                     {badge}
                   </span>
-                  {r && <span className={clsx("absolute right-2.5 top-2 hidden h-2 w-2 rounded-full lg:block", podeModerar ? "bg-amber-400" : "bg-brand-400")} />}
+                  <span
+                    className={clsx(
+                      "absolute left-[30px] top-2 hidden h-2 w-2 rounded-full transition-opacity duration-200 lg:block",
+                      podeModerar ? "bg-amber-400" : "bg-brand-400",
+                      r ? "opacity-100 delay-150" : "opacity-0",
+                    )}
+                  />
                 </>
               )}
             </Link>
           ))}
         </nav>
 
-        <div className={clsx("border-t border-white/10", r ? "p-4 lg:px-0 lg:py-4" : "p-4")}>
-          <div className={clsx("mb-3 flex items-center justify-between", r && "lg:justify-center")}>
-            <span className={clsx("text-[10px] font-semibold uppercase tracking-wider text-white/60", some)}>Aparência</span>
+        <div className="border-t border-white/10 px-3 py-4">
+          <div className="mb-3 flex items-center gap-3 pl-1">
             <ThemeSwitch />
+            <span className={clsx("text-[10px] font-semibold uppercase tracking-wider text-white/60", texto)}>Aparência</span>
           </div>
-          <div className={some}>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/60">
-              Simular perfil (demo)
-            </label>
-            <select
-              value={usuario.id}
-              onChange={(e) => setUsuarioAtual(e.target.value)}
-              className="mb-3 w-full rounded-lg bg-white/10 px-2 py-1.5 text-xs text-white outline-none"
-            >
-              {usuarios.filter((u) => u.ativo).map((u) => (
-                <option key={u.id} value={u.id} className="text-gray-900">
-                  {u.nome} — {u.perfil}
-                </option>
-              ))}
-            </select>
+          <div className={clsx("grid transition-[grid-template-rows,opacity]", EASE, r ? "lg:grid-rows-[0fr] lg:opacity-0" : "grid-rows-[1fr]")}>
+            <div className="min-h-0 overflow-hidden px-1">
+              <label className="mb-1 block whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-white/60">
+                Simular perfil (demo)
+              </label>
+              <select
+                value={usuario.id}
+                onChange={(e) => setUsuarioAtual(e.target.value)}
+                tabIndex={r ? -1 : 0}
+                className="mb-3 w-full rounded-lg bg-white/10 px-2 py-1.5 text-xs text-white outline-none"
+              >
+                {usuarios.filter((u) => u.ativo).map((u) => (
+                  <option key={u.id} value={u.id} className="text-gray-900">
+                    {u.nome} — {u.perfil}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <Link
             href="/perfil/"
             title={r ? `${usuario.nome} — ${usuario.perfil}` : undefined}
-            className={clsx("flex items-center gap-3 rounded-xl p-2 hover:bg-white/10", r && "lg:justify-center")}
+            className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-white/10"
           >
             <Avatar nome={usuario.nome} foto={usuario.foto} />
-            <div className={clsx("min-w-0", some)}>
+            <div className={clsx("min-w-0", texto)}>
               <div className="truncate text-sm font-semibold">{usuario.nome}</div>
               <div className="truncate text-xs text-white/60">{usuario.email}</div>
             </div>
@@ -162,7 +173,7 @@ function Shell({ children }: { children: ReactNode }) {
 
       {menuAberto && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setMenuAberto(false)} />}
 
-      <div className={clsx("flex min-w-0 flex-1 flex-col transition-[padding] duration-300", r ? "lg:pl-[76px]" : "lg:pl-64")}>
+      <div className={clsx("flex min-w-0 flex-1 flex-col transition-[padding]", EASE, r ? "lg:pl-[76px]" : "lg:pl-64")}>
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-gray-200 bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
           <button onClick={() => setMenuAberto(true)} aria-label="Abrir menu"><Menu /></button>
           <span className="font-bold text-brand-800">Portal de Produtos</span>
@@ -171,7 +182,7 @@ function Shell({ children }: { children: ReactNode }) {
         <div className="bg-amber-50 px-6 py-1.5 text-center text-xs text-amber-800 dark:bg-amber-100">
           Protótipo para apresentação · todos os dados são fictícios · alterações ficam salvas apenas neste navegador
         </div>
-        <main className={clsx("mx-auto w-full flex-1 p-4 sm:p-6 lg:p-8", r ? "max-w-[1600px]" : "max-w-7xl")}>{children}</main>
+        <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

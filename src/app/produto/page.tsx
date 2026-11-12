@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { FeedItem } from "@/components/feed";
-import { AvisoRedeNacional, Kicker, LinhaSelo, nomeCurto, ProdutoCapa, RedeNacionalBadge, StatusBadge, tomSituacao } from "@/components/produto";
+import { AvisoRedeNacional, Kicker, nomeCurto, ProdutoCapa, RedeNacionalBadge, StatusBadge, tomSituacao } from "@/components/produto";
 import { CapaSolucao } from "@/components/solucao";
 import { Badge, Tabs, Vazio } from "@/components/ui";
 import { brl, dataBR, desvioNTRP, formatarRegistro, pct, siglaSegmentacao, tipoPessoa } from "@/lib/ans";
@@ -79,7 +79,6 @@ function ProdutoDetalhe() {
           <Kicker produto={produto} className="mt-1 text-sm" />
           <h1 className="font-display text-6xl uppercase leading-[0.85] tracking-wide drop-shadow-lg sm:text-7xl">{nomeCurto(produto)}</h1>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <LinhaSelo produto={produto} />
             <StatusBadge produto={produto} />
             <Badge tom={tomSituacao(produto.situacaoANS)}>ANS: {produto.situacaoANS}</Badge>
             <RedeNacionalBadge produto={produto} grande />
