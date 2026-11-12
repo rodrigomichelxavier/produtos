@@ -14,7 +14,8 @@ Os dados do protótipo são **fictícios**; nunca use nomes reais de operadoras,
   Holambra, Hortolândia, Indaiatuba, Jaguariúna, Monte Mor, Paulínia, Santo Antônio de Posse, Sumaré, Valinhos e Vinhedo.
   **Nunca citar o nome de operadora real** associada a essa região.
 - Segmentações usadas: Ambulatorial + Hospitalar com Obstetrícia · Hospitalar · Referência.
-- Abrangências usadas: Grupo de Municípios · Nacional.
+- Abrangências usadas: Grupo de Municípios · Nacional. **Planos Pessoa Física (Individual/Familiar) nunca são nacionais.**
+- Linhas de produto: Econômico · Intermediário · Superior.
 - Rede: produto de Grupo de Municípios usa **somente a rede direta** (prestadores especificados). Produto Nacional usa
   **rede direta + rede nacional referenciada** de nível Básica, Especial ou Master — exibir como "+ Rede Nacional X".
 - Prestadores têm tipo, cidade/UF, bairro e CNES; são cadastrados em Gestão de Rede (Administrador e Gestor).

@@ -80,6 +80,7 @@ function Resultado({ a, b, soDif, setSoDif }: { a: Produto; b: Produto; soDif: b
   const lg = (p: Produto) => (p.limiteGlobal ? `${brl(p.limiteGlobal.valor)} (${p.limiteGlobal.periodo.toLowerCase()})` : "—");
   const linhas: [string, string, string][] = [
     ["Registro ANS", formatarRegistro(a.registroANS), formatarRegistro(b.registroANS)],
+    ["Linha", a.linha, b.linha],
     ["Tipo de contratação", a.contratacao, b.contratacao],
     ["Segmentação", a.segmentacao, b.segmentacao],
     ["Abrangência", a.abrangencia, b.abrangencia],

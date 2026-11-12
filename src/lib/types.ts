@@ -13,6 +13,10 @@ export type Segmentacao =
 
 export type Abrangencia = "Nacional" | "Grupo de Municípios";
 
+/** Classificação da linha de produto no portfólio. */
+export const LINHAS = ["Econômico", "Intermediário", "Superior"] as const;
+export type Linha = (typeof LINHAS)[number];
+
 /** Nível da rede nacional referenciada que complementa a rede direta nos produtos nacionais. */
 export type RedeNacional = "Básica" | "Especial" | "Master";
 
@@ -87,6 +91,7 @@ export interface Produto {
   registroANS: string; // nº de registro do produto na ANS (9 dígitos)
   nome: string;
   descricao: string;
+  linha: Linha;
   contratacao: TipoContratacao;
   segmentacao: Segmentacao;
   abrangencia: Abrangencia;

@@ -11,7 +11,7 @@ import { MUNICIPIOS_REGIAO } from "@/data/seed";
 import { brl, validarFaixasRN63 } from "@/lib/ans";
 import { usePermissoes, useStore } from "@/lib/store";
 import {
-  FAIXAS_ETARIAS, ICONES_PRODUTO, TIPOS_PRESTADOR, type Abrangencia, type Acomodacao, type FatorModerador, type FormacaoPreco,
+  FAIXAS_ETARIAS, ICONES_PRODUTO, LINHAS, TIPOS_PRESTADOR, type Linha, type Abrangencia, type Acomodacao, type FatorModerador, type FormacaoPreco,
   type ItemCoparticipacao, type Produto, type RedeNacional, type Segmentacao, type SituacaoANS, type StatusComercial,
   type TipoContratacao,
 } from "@/lib/types";
@@ -34,6 +34,7 @@ const novoProduto = (): Produto => ({
   registroANS: "",
   nome: "",
   descricao: "",
+  linha: "Intermediário",
   contratacao: "Individual/Familiar",
   segmentacao: "Ambulatorial + Hospitalar com Obstetrícia",
   abrangencia: "Grupo de Municípios",
@@ -84,6 +85,7 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
     !p.nome.trim() && "Informe o nome comercial do produto.",
     regDigitos.length !== 9 && "O nº de registro ANS do produto deve ter 9 dígitos.",
     !regrasPreco.every((r) => r.ok) && "A tabela de preços não atende à RN 63/2003.",
+    p.abrangencia === "Nacional" && p.contratacao === "Individual/Familiar" && "Planos Pessoa Física não podem ter abrangência nacional (regra de negócio).",
     p.abrangencia === "Nacional" && !p.redeNacional && "Produto nacional precisa da rede nacional referenciada (Básica, Especial ou Master).",
     p.abrangencia === "Grupo de Municípios" && p.areaAtuacao.length === 0 && "Selecione ao menos um município da área de atuação.",
     p.abrangencia === "Grupo de Municípios" && p.rede.length === 0 && "Produto de grupo de municípios precisa ter os prestadores da rede direta especificados.",
@@ -126,6 +128,20 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
         <div className="grid gap-4 md:grid-cols-3">
           <Campo label="Nome comercial" className="md:col-span-2">
             <input className="input" value={p.nome} onChange={(e) => set("nome", e.target.value)} placeholder="Ex.: Aurora Essencial" />
+          </Campo>
+          <Campo label="Linha do produto">
+            <div className="flex gap-1">
+              {LINHAS.map((l: Linha) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => set("linha", l)}
+                  className={`flex-1 rounded-lg px-2 py-2 text-xs font-semibold ring-1 transition ${p.linha === l ? "bg-accent text-white ring-accent" : "text-gray-600 ring-gray-300 hover:bg-gray-50"}`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
           </Campo>
           <Campo label="Nº de registro ANS (9 dígitos)">
             <input className="input" value={p.registroANS} maxLength={12} onChange={(e) => set("registroANS", e.target.value)} placeholder="000000000" />
@@ -191,12 +207,23 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
 
       <Secao titulo="Características do produto (ANS)">
         <div className="grid gap-4 md:grid-cols-3">
-          <Sel label="Tipo de contratação" valor={p.contratacao} opcoes={OPC.contratacao} onChange={(v) => set("contratacao", v)} />
+          <Sel
+            label="Tipo de contratação"
+            valor={p.contratacao}
+            opcoes={OPC.contratacao}
+            onChange={(v) =>
+              setP((x) =>
+                v === "Individual/Familiar" && x.abrangencia === "Nacional"
+                  ? { ...x, contratacao: v, abrangencia: "Grupo de Municípios", redeNacional: undefined, areaAtuacao: [...MUNICIPIOS_REGIAO] }
+                  : { ...x, contratacao: v },
+              )
+            }
+          />
           <Sel label="Segmentação assistencial" valor={p.segmentacao} opcoes={OPC.segmentacao} onChange={(v) => set("segmentacao", v)} />
           <Sel
             label="Abrangência geográfica"
             valor={p.abrangencia}
-            opcoes={OPC.abrangencia}
+            opcoes={p.contratacao === "Individual/Familiar" ? ["Grupo de Municípios"] : OPC.abrangencia}
             onChange={(v) =>
               setP((x) => ({
                 ...x,
@@ -263,7 +290,7 @@ function Formulario({ inicial, novo }: { inicial: Produto; novo: boolean }) {
           <Dica>Coletivo por adesão: exige vínculo do beneficiário com pessoa jurídica de caráter profissional, classista ou setorial (RN 557/2022).</Dica>
         )}
         {p.contratacao === "Individual/Familiar" && (
-          <Dica>Individual/Familiar: reajuste anual limitado ao percentual divulgado pela ANS.</Dica>
+          <Dica>Individual/Familiar: reajuste anual limitado ao percentual divulgado pela ANS. Por regra de negócio, planos PF são apenas de Grupo de Municípios.</Dica>
         )}
       </Secao>
 

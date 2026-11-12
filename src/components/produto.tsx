@@ -40,6 +40,42 @@ export const ICONES_PROD: Record<IconeProduto, { icon: LucideIcon; rotulo: strin
   globo: { icon: Globe2, rotulo: "Globo" },
 };
 
+export const COR_LINHA: Record<Produto["linha"], string> = {
+  Econômico: "#34d399",
+  Intermediário: "#60a5fa",
+  Superior: "#fbbf24",
+};
+
+/** Linha superior do título nas capas: "AURORA · SUPERIOR". */
+export function Kicker({ produto, className }: { produto: Produto; className?: string }) {
+  return (
+    <div className={clsx("flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70", className)}>
+      Aurora
+      <span className="h-1 w-1 rounded-full" style={{ background: COR_LINHA[produto.linha] }} />
+      <span style={{ color: COR_LINHA[produto.linha] }}>{produto.linha}</span>
+    </div>
+  );
+}
+
+/** Selo da linha (Econômico, Intermediário, Superior), estilo "classificação". */
+const COR_LINHA_CLARO: Record<Produto["linha"], string> = {
+  Econômico: "#047857",
+  Intermediário: "#1d4ed8",
+  Superior: "#b45309",
+};
+
+export function LinhaSelo({ produto, fundoClaro, className }: { produto: Produto; fundoClaro?: boolean; className?: string }) {
+  const cor = fundoClaro ? COR_LINHA_CLARO[produto.linha] : COR_LINHA[produto.linha];
+  return (
+    <span
+      className={clsx("inline-flex items-center gap-1.5 rounded border px-1.5 py-px text-[11px] font-bold uppercase tracking-wider", fundoClaro && "dark:!border-current", className)}
+      style={{ borderColor: cor, color: cor }}
+    >
+      {produto.linha}
+    </span>
+  );
+}
+
 /** Nome sem a marca ("Aurora"), usado como título nas capas. */
 export const nomeCurto = (p: Pick<Produto, "nome">) => p.nome.replace(/^Aurora\s+/i, "");
 
@@ -84,7 +120,7 @@ export function ProdutoCapa({
           {selos && foraDeVenda && (
             <span className="mb-1 inline-block rounded-sm bg-black/70 px-1.5 py-px text-[9px] font-extrabold uppercase tracking-wider text-white">Fora de venda</span>
           )}
-          <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70">Aurora</div>
+          <Kicker produto={produto} />
           <div
             className={clsx(
               "font-display uppercase leading-[0.9] tracking-wide text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]",

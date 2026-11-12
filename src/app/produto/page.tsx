@@ -5,11 +5,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { FeedItem } from "@/components/feed";
-import { AvisoRedeNacional, nomeCurto, ProdutoCapa, RedeNacionalBadge, StatusBadge, tomSituacao } from "@/components/produto";
-import { ListaRegras } from "@/components/regras";
+import { AvisoRedeNacional, Kicker, LinhaSelo, nomeCurto, ProdutoCapa, RedeNacionalBadge, StatusBadge, tomSituacao } from "@/components/produto";
 import { CapaSolucao } from "@/components/solucao";
 import { Badge, Tabs, Vazio } from "@/components/ui";
-import { brl, dataBR, desvioNTRP, formatarRegistro, pct, siglaSegmentacao, tipoPessoa, validarFaixasRN63 } from "@/lib/ans";
+import { brl, dataBR, desvioNTRP, formatarRegistro, pct, siglaSegmentacao, tipoPessoa } from "@/lib/ans";
 import { usePermissoes, useStore } from "@/lib/store";
 import { FAIXAS_ETARIAS, type Produto, type TipoPrestador } from "@/lib/types";
 
@@ -77,9 +76,10 @@ function ProdutoDetalhe() {
           <div className="text-xs font-semibold uppercase tracking-[0.25em] text-white/70">
             Registro ANS nº {formatarRegistro(produto.registroANS)}
           </div>
-          <div className="mt-1 text-sm font-semibold uppercase tracking-[0.4em] text-white/70">Aurora</div>
+          <Kicker produto={produto} className="mt-1 text-sm" />
           <h1 className="font-display text-6xl uppercase leading-[0.85] tracking-wide drop-shadow-lg sm:text-7xl">{nomeCurto(produto)}</h1>
           <div className="mt-4 flex flex-wrap items-center gap-2">
+            <LinhaSelo produto={produto} />
             <StatusBadge produto={produto} />
             <Badge tom={tomSituacao(produto.situacaoANS)}>ANS: {produto.situacaoANS}</Badge>
             <RedeNacionalBadge produto={produto} grande />
@@ -125,7 +125,7 @@ function AbaPreco({ produto }: { produto: Produto }) {
   const tolerancia = useStore((s) => s.config.toleranciaNTRP) / 100;
   const desvios = desvioNTRP(produto);
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+    <div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -159,7 +159,6 @@ function AbaPreco({ produto }: { produto: Produto }) {
           tolerância interna de {(tolerancia * 100).toFixed(0)}% em relação à NTRP (parâmetro em Configurações).
         </p>
       </div>
-      <ListaRegras titulo="Faixas etárias (RN 63/2003)" regras={validarFaixasRN63(produto.precoComercial)} />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { Check, ChevronDown, Edit3, GitCompare, Info, Play, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { nomeCurto, NIVEL_COR, ProdutoCapa } from "@/components/produto";
+import { Kicker, LinhaSelo, nomeCurto, NIVEL_COR, ProdutoCapa } from "@/components/produto";
 import { CapaSolucao, tom } from "@/components/solucao";
 import { CardStreaming, Fileira, ItemTop, JanelaDetalhe } from "@/components/streaming";
 import { brl, siglaSegmentacao, tipoPessoa } from "@/lib/ans";
@@ -20,6 +20,9 @@ type Caracteristica = { id: string; grupo: string; rotulo: string; teste: (p: Pr
 function montarCaracteristicas(solucoes: SolucaoAdicional[]): Caracteristica[] {
   const c = (grupo: string, rotulo: string, teste: (p: Produto) => boolean): Caracteristica => ({ id: `${grupo}:${rotulo}`, grupo, rotulo, teste });
   return [
+    c("Linha", "Econômico", (p) => p.linha === "Econômico"),
+    c("Linha", "Intermediário", (p) => p.linha === "Intermediário"),
+    c("Linha", "Superior", (p) => p.linha === "Superior"),
     c("Abrangência", "Região de Campinas", (p) => p.abrangencia === "Grupo de Municípios"),
     c("Abrangência", "Nacional", (p) => p.abrangencia === "Nacional"),
     c("Rede nacional", "Rede Básica", (p) => p.redeNacional === "Básica"),
@@ -90,6 +93,9 @@ export default function PortfolioPage() {
 
   const fileiras: { titulo: string; subtitulo?: string; lista: Produto[] }[] = [
     { titulo: "Em comercialização", lista: vendaveis },
+    { titulo: "Linha Superior", subtitulo: "rede mais ampla e mais conforto", lista: vendaveis.filter((p) => p.linha === "Superior") },
+    { titulo: "Linha Intermediária", lista: vendaveis.filter((p) => p.linha === "Intermediário") },
+    { titulo: "Linha Econômica", subtitulo: "melhor custo-benefício", lista: vendaveis.filter((p) => p.linha === "Econômico") },
     { titulo: "Cobertura nacional", subtitulo: "rede direta + rede nacional", lista: vendaveis.filter((p) => p.abrangencia === "Nacional") },
     { titulo: "Na Região de Campinas", subtitulo: "13 municípios · rede direta", lista: vendaveis.filter((p) => p.abrangencia === "Grupo de Municípios") },
     { titulo: "Mensalidade menor", subtitulo: "com coparticipação", lista: vendaveis.filter((p) => p.fatorModerador !== "Sem fator moderador") },
@@ -209,7 +215,7 @@ function Hero({ lista, onMais }: { lista: Produto[]; onMais: (id: string) => voi
   }, [i, pausado, lista.length]);
 
   return (
-    <div className="relative h-[500px] overflow-hidden bg-black sm:h-[540px]" onMouseEnter={() => setPausado(true)} onMouseLeave={() => setPausado(false)}>
+    <div className="relative min-h-[500px] overflow-hidden bg-black sm:min-h-[560px]" onMouseEnter={() => setPausado(true)} onMouseLeave={() => setPausado(false)}>
       {lista.map((p, j) => (
         <div key={p.id} className={clsx("absolute inset-0 transition-opacity duration-1000", j === idx ? "opacity-100" : "opacity-0")}>
           <ProdutoCapa produto={p} variante="hero" titulo={false} className={clsx("transition-transform duration-[8000ms] ease-out", j === idx && "scale-105")} />
@@ -218,18 +224,18 @@ function Hero({ lista, onMais }: { lista: Produto[]; onMais: (id: string) => voi
       <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-page to-transparent" />
 
-      <div key={atual.id} className="relative flex h-full max-w-2xl flex-col justify-end px-6 pb-20 text-white sm:px-10 lg:px-12">
+      <div key={atual.id} className="relative flex min-h-[500px] max-w-2xl flex-col justify-end px-6 pb-20 pt-10 text-white sm:min-h-[560px] sm:px-10 md:pt-36 lg:px-12">
         <div className="mb-2 flex items-center gap-2">
           <span className="flex h-6 w-6 items-center justify-center rounded bg-brand-500 font-display text-lg leading-none text-white">A</span>
           <span className="text-xs font-bold uppercase tracking-[0.25em] text-white/80">
             Plano de saúde · {tipoPessoa(atual.contratacao) === "PF" ? "Pessoa física" : "Empresas"}
           </span>
         </div>
-        <div className="text-sm font-semibold uppercase tracking-[0.4em] text-white/70">Aurora</div>
-        <h2 className="font-display text-6xl uppercase leading-[0.85] tracking-wide drop-shadow-lg sm:text-7xl lg:text-8xl">{nomeCurto(atual)}</h2>
+        <Kicker produto={atual} className="text-sm" />
+        <h2 className="font-display text-6xl uppercase leading-[0.85] tracking-wide drop-shadow-lg sm:text-7xl xl:text-8xl">{nomeCurto(atual)}</h2>
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
           <span className="font-semibold text-emerald-300">{atual.statusComercial}</span>
-          <span className="text-white/40">•</span>
+          <LinhaSelo produto={atual} />
           <span>{atual.contratacao}</span>
           <span className="text-white/40">•</span>
           <span>{siglaSegmentacao(atual.segmentacao)}</span>
@@ -374,7 +380,7 @@ function CardProduto({ p, onClick, largura }: { p: Produto; onClick: () => void;
           {p.statusComercial === "Fora de comercialização" && (
             <span className="mb-1 inline-block rounded-sm bg-black/70 px-1.5 py-px text-[9px] font-extrabold uppercase tracking-wider text-white">Fora de venda</span>
           )}
-          <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70">Aurora</div>
+          <Kicker produto={p} />
           <div className="font-display text-[26px] uppercase leading-[0.9] tracking-wide text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">{nomeCurto(p)}</div>
         </>
       }
@@ -400,7 +406,7 @@ function Espiada({ p, onClose, onAbrir }: { p: Produto; onClose: () => void; onA
   const permitidas = solucoes.filter((s) => p.solucoes.includes(s.id) && s.ativa);
   const semelhantes = produtos
     .filter((x) => x.id !== p.id && tipoPessoa(x.contratacao) === tipoPessoa(p.contratacao) && x.statusComercial !== "Fora de comercialização")
-    .sort((a, b) => Math.abs(a.precoComercial[0] - p.precoComercial[0]) - Math.abs(b.precoComercial[0] - p.precoComercial[0]))
+    .sort((a, b) => Number(b.linha === p.linha) - Number(a.linha === p.linha) || Math.abs(a.precoComercial[0] - p.precoComercial[0]) - Math.abs(b.precoComercial[0] - p.precoComercial[0]))
     .slice(0, 3);
   const max = Math.max(...p.precoComercial);
   const rede = prestadores.filter((x) => p.rede.includes(x.id));
@@ -411,7 +417,7 @@ function Espiada({ p, onClose, onAbrir }: { p: Produto; onClose: () => void; onA
       capa={<ProdutoCapa produto={p} variante="hero" titulo={false} />}
       sobre={
         <div className="absolute bottom-0 left-0 p-6 sm:p-8">
-          <div className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Aurora</div>
+          <Kicker produto={p} className="text-xs" />
           <h2 className="font-display text-5xl uppercase leading-[0.85] tracking-wide text-white drop-shadow-lg sm:text-6xl">{nomeCurto(p)}</h2>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link href={`/produto/?id=${p.id}`} className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-bold text-black hover:bg-white/80">
@@ -433,6 +439,7 @@ function Espiada({ p, onClose, onAbrir }: { p: Produto; onClose: () => void; onA
         <div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
             <span className={clsx("font-semibold", p.statusComercial === "Em comercialização" ? "text-emerald-600" : "text-gray-500")}>{p.statusComercial}</span>
+            <LinhaSelo produto={p} fundoClaro />
             <span className="rounded border border-gray-300 px-1.5 text-xs text-gray-600">{tipoPessoa(p.contratacao)}</span>
             <span className="text-gray-600">{siglaSegmentacao(p.segmentacao)}</span>
             {p.redeNacional && (
@@ -511,12 +518,6 @@ function Espiada({ p, onClose, onAbrir }: { p: Produto; onClose: () => void; onA
         </div>
       )}
 
-      {p.conceitoImagem && (
-        <div className="border-t border-gray-200 px-6 py-5 sm:px-8">
-          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">Sugestão de imagem para o marketing</div>
-          <p className="mt-1 text-sm italic text-gray-600">{p.conceitoImagem}</p>
-        </div>
-      )}
     </JanelaDetalhe>
   );
 }

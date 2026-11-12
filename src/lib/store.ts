@@ -91,6 +91,7 @@ function diffProduto(antes: Produto, depois: Produto, prestadores: Prestador[], 
 
   const campos: [keyof Produto, string][] = [
     ["nome", "Nome"],
+    ["linha", "Linha"],
     ["descricao", "Descrição"],
     ["registroANS", "Registro ANS"],
     ["contratacao", "Tipo de contratação"],
@@ -269,7 +270,7 @@ export const useStore = create<State>()(
     },
     {
       name: "portal-produtos-demo",
-      version: 4,
+      version: 5,
       // Dados de versões anteriores do protótipo são descartados.
       migrate: () => inicial() as unknown as State,
     },

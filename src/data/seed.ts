@@ -136,6 +136,7 @@ const prod = ({ preco, ntrp, dias, ...b }: Base): Produto => ({
 export const PRODUTOS: Produto[] = [
   prod({
     id: "p1", registroANS: "498765011", nome: "Aurora Essencial Enfermaria",
+    linha: "Econômico",
     descricao: "Plano de entrada para pessoa física, com rede regional na RMC, foco em atenção primária e coparticipação que reduz a mensalidade.",
     contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: REG_A, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
@@ -144,6 +145,7 @@ export const PRODUTOS: Produto[] = [
   }),
   prod({
     id: "p2", registroANS: "498765022", nome: "Aurora Essencial Apartamento",
+    linha: "Econômico",
     descricao: "Mesma rede do Essencial com acomodação em apartamento. Indicado para famílias que buscam mais conforto na internação.",
     contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: REG_A, acomodacao: "Apartamento (individual)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
@@ -152,6 +154,7 @@ export const PRODUTOS: Produto[] = [
   }),
   prod({
     id: "p3", registroANS: "498765033", nome: "Aurora Plus",
+    linha: "Intermediário",
     descricao: "Plano intermediário sem coparticipação, com rede ampliada nos 13 municípios da região, incluindo hospital infantil de referência.",
     contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
@@ -160,14 +163,16 @@ export const PRODUTOS: Produto[] = [
     solucoes: ["s1", "s2", "s3", "s5", "s7", "s9", "s14"], cor: "#1b6e3a", icone: "familia", conceitoImagem: "Família de três gerações caminhando em parque arborizado ao entardecer, amplo espaço livre à esquerda para o título. Mensagem: rede completa na região.", dias: 1,
   }),
   prod({
-    id: "p4", registroANS: "498765044", nome: "Aurora Prime Nacional",
-    descricao: "Linha premium: toda a rede direta regional + Rede Nacional Master, com hospitais de excelência em todo o país. Sem coparticipação.",
-    contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Nacional", redeNacional: "Master",
-    areaAtuacao: NACIONAL, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
-    preco: 749.0, ntrp: 731.5, coparticipacao: [], rede: TODOS, solucoes: ["s1", "s2", "s3", "s4", "s5", "s7", "s8", "s9", "s10", "s14"], cor: "#12324f", icone: "coroa", conceitoImagem: "Mulher madura em saguão de aeroporto com mala de mão, olhar confiante, paleta azul-marinho com dourado discreto. Mensagem: padrão premium em todo o país.", dias: 3,
+    id: "p4", registroANS: "498765044", nome: "Aurora Prime",
+    linha: "Superior",
+    descricao: "Linha superior para a família: a rede direta completa nos 13 municípios da região, com hospitais de referência, apartamento e sem coparticipação.",
+    contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
+    areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
+    preco: 749.0, ntrp: 731.5, coparticipacao: [], rede: TODOS, solucoes: ["s1", "s2", "s3", "s4", "s5", "s7", "s8", "s9", "s10", "s14"], cor: "#12324f", icone: "coroa", conceitoImagem: "Casal maduro em casa ampla e iluminada, momento de tranquilidade, paleta azul-marinho com dourado discreto. Mensagem: o melhor da rede, perto de você.", dias: 3,
   }),
   prod({
     id: "p5", registroANS: "498765055", nome: "Aurora Hospitalar",
+    linha: "Econômico",
     descricao: "Plano exclusivamente hospitalar: internações, cirurgias e urgências. Não cobre consultas e exames ambulatoriais eletivos.",
     contratacao: "Individual/Familiar", segmentacao: "Hospitalar", abrangencia: "Grupo de Municípios",
     areaAtuacao: REG_A, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Sem fator moderador",
@@ -176,6 +181,7 @@ export const PRODUTOS: Produto[] = [
   }),
   prod({
     id: "p6", registroANS: "498765066", nome: "Aurora Empresarial Smart",
+    linha: "Econômico",
     descricao: "Plano coletivo empresarial para PMEs (a partir de 2 vidas), rede regional e coparticipação. Ideal para reduzir custo de benefício.",
     contratacao: "Coletivo Empresarial", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
@@ -185,6 +191,7 @@ export const PRODUTOS: Produto[] = [
   }),
   prod({
     id: "p7", registroANS: "498765077", nome: "Aurora Empresarial Top",
+    linha: "Superior",
     descricao: "Coletivo empresarial nacional: rede direta ampliada na região + Rede Nacional Especial. Apartamento, sem coparticipação.",
     contratacao: "Coletivo Empresarial", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Nacional", redeNacional: "Especial",
     areaAtuacao: NACIONAL, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
@@ -194,6 +201,7 @@ export const PRODUTOS: Produto[] = [
   }),
   prod({
     id: "p8", registroANS: "498765088", nome: "Aurora Executivo Nacional",
+    linha: "Superior",
     descricao: "Plano coletivo empresarial para executivos: toda a rede direta + Rede Nacional Master e reembolso.",
     contratacao: "Coletivo Empresarial", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Nacional", redeNacional: "Master",
     areaAtuacao: NACIONAL, acomodacao: "Apartamento (individual)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
@@ -201,6 +209,7 @@ export const PRODUTOS: Produto[] = [
   }),
   prod({
     id: "p9", registroANS: "498765099", nome: "Aurora Adesão Profissional",
+    linha: "Intermediário",
     descricao: "Coletivo por adesão para associados de entidades de classe, com administradora de benefícios. Rede regional na RMC.",
     contratacao: "Coletivo por Adesão", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Apartamento (individual)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
@@ -209,6 +218,7 @@ export const PRODUTOS: Produto[] = [
   }),
   prod({
     id: "p10", registroANS: "498765100", nome: "Aurora Adesão Universitário",
+    linha: "Econômico",
     descricao: "Coletivo por adesão voltado a estudantes e recém-formados, enfermaria e coparticipação para preço acessível.",
     contratacao: "Coletivo por Adesão", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: ["Campinas/SP", "Hortolândia/SP", "Sumaré/SP"], acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação",
@@ -217,6 +227,7 @@ export const PRODUTOS: Produto[] = [
   }),
   prod({
     id: "p11", registroANS: "498765111", nome: "Aurora Referência",
+    linha: "Econômico",
     descricao: "Plano-referência (art. 10 da Lei 9.656/1998): cobertura ambulatorial, hospitalar e obstétrica, padrão enfermaria, com rede regional.",
     contratacao: "Coletivo Empresarial", segmentacao: "Referência", abrangencia: "Grupo de Municípios",
     areaAtuacao: MUNICIPIOS_REGIAO, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Sem fator moderador", statusComercial: "Em comercialização",
@@ -226,6 +237,7 @@ export const PRODUTOS: Produto[] = [
   }),
   prod({
     id: "p12", registroANS: "498765122", nome: "Aurora Nacional Básico",
+    linha: "Intermediário",
     descricao: "Coletivo empresarial de entrada com abrangência nacional: rede direta regional + Rede Nacional Básica, enfermaria e coparticipação.",
     contratacao: "Coletivo Empresarial", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Nacional", redeNacional: "Básica",
     areaAtuacao: NACIONAL, acomodacao: "Enfermaria (coletiva)", fatorModerador: "Coparticipação", statusComercial: "Em comercialização",
@@ -234,6 +246,7 @@ export const PRODUTOS: Produto[] = [
   }),
   prod({
     id: "p13", registroANS: "498765133", nome: "Aurora Clássico 2019",
+    linha: "Econômico",
     descricao: "Produto legado substituído pela linha Essencial. Mantido apenas para a carteira existente; não pode ser comercializado.",
     contratacao: "Individual/Familiar", segmentacao: "Ambulatorial + Hospitalar com Obstetrícia", abrangencia: "Grupo de Municípios",
     areaAtuacao: ["Campinas/SP", "Valinhos/SP"], acomodacao: "Enfermaria (coletiva)", fatorModerador: "Sem fator moderador",
