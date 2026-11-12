@@ -226,3 +226,17 @@ body {
 .osm-escuro {
   filter: invert(1) hue-rotate(180deg) grayscale(0.8) brightness(0.85) contrast(0.9);
 }
+
+/* Opções de listas de seleção legíveis nos dois temas (a lista aberta é desenhada pelo navegador) */
+option {
+  background-color: var(--color-surface);
+  color: var(--color-gray-900);
+}
+/* Seletor sobre o menu lateral (fundo sempre escuro) */
+.seletor-escuro {
+  color-scheme: dark;
+}
+.seletor-escuro option {
+  background-color: #18201a;
+  color: #eff3f0;
+}

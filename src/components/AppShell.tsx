@@ -148,10 +148,10 @@ function Shell({ children }: { children: ReactNode }) {
                 value={usuario.id}
                 onChange={(e) => setUsuarioAtual(e.target.value)}
                 tabIndex={r ? -1 : 0}
-                className="mb-3 w-full rounded-lg bg-white/10 px-2 py-1.5 text-xs text-white outline-none"
+                className="seletor-escuro mb-3 w-full rounded-lg bg-white/10 px-2 py-1.5 text-xs text-white outline-none"
               >
                 {usuarios.filter((u) => u.ativo).map((u) => (
-                  <option key={u.id} value={u.id} className="text-gray-900">
+                  <option key={u.id} value={u.id}>
                     {u.nome} — {u.perfil}
                   </option>
                 ))}
