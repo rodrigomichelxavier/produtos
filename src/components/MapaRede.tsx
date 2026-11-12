@@ -3,7 +3,7 @@
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import Link from "next/link";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import type { Prestador, Produto, Unidade } from "@/lib/types";
@@ -32,36 +32,100 @@ function iconePara(p: Prestador): L.DivIcon {
   return icone;
 }
 
-/** Ajusta o enquadramento sempre que o conjunto de pontos muda. */
+function enquadrar(map: L.Map, pontos: Ponto[], animar: boolean) {
+  if (!pontos.length) return;
+  if (pontos.length === 1) {
+    map.setView([pontos[0].u.lat, pontos[0].u.lng], 14, { animate: animar });
+    return;
+  }
+  const b = L.latLngBounds(pontos.map((x) => [x.u.lat, x.u.lng] as [number, number]));
+  // deixa espaço para o painel de filtros no topo
+  const opcoes = { paddingTopLeft: [60, 230] as L.PointTuple, paddingBottomRight: [60, 50] as L.PointTuple, maxZoom: 13 };
+  if (animar) map.flyToBounds(b, { ...opcoes, duration: 0.7 });
+  else map.fitBounds(b, opcoes);
+}
+
+/**
+ * Enquadra os pontos quando o filtro muda e também quando a área do mapa muda de tamanho
+ * (ex.: menu lateral recolhido/expandido) — sem isso o Leaflet calcula o zoom com o tamanho antigo.
+ */
 function Enquadrar({ pontos, chave }: { pontos: Ponto[]; chave: string }) {
   const map = useMap();
+  const ref = useRef(pontos);
+  ref.current = pontos;
+
   useEffect(() => {
-    if (!pontos.length) return;
-    if (pontos.length === 1) {
-      map.flyTo([pontos[0].u.lat, pontos[0].u.lng], 14, { duration: 0.8 });
-      return;
-    }
-    const b = L.latLngBounds(pontos.map((x) => [x.u.lat, x.u.lng] as [number, number]));
-    // deixa espaço para o painel de filtros no topo
-    map.flyToBounds(b, { paddingTopLeft: [60, 230], paddingBottomRight: [60, 50], maxZoom: 13, duration: 0.8 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chave]);
+    map.invalidateSize();
+    enquadrar(map, ref.current, true);
+  }, [chave, map]);
+
+  useEffect(() => {
+    let t: number | undefined;
+    const obs = new ResizeObserver(() => {
+      window.clearTimeout(t);
+      t = window.setTimeout(() => {
+        map.invalidateSize();
+        enquadrar(map, ref.current, false);
+      }, 120);
+    });
+    obs.observe(map.getContainer());
+    return () => { obs.disconnect(); window.clearTimeout(t); };
+  }, [map]);
   return null;
+}
+
+/**
+ * Mapa base sem chave de API: Esri "Light/Dark Gray Canvas" (limpo, em tons de cinza) com a camada de nomes.
+ * Se os blocos falharem, cai automaticamente para o OpenStreetMap.
+ */
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas";
+const ATRIB_ESRI = "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap";
+const ATRIB_OSM = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
+function MapaBase({ escuro }: { escuro: boolean }) {
+  const [fonte, setFonte] = useState<"esri" | "osm">("esri");
+  const erros = useRef(0);
+  const tom = escuro ? "Dark" : "Light";
+  const aoErrar = () => {
+    erros.current += 1;
+    if (erros.current > 6 && fonte === "esri") setFonte("osm");
+  };
+  if (fonte === "osm")
+    return (
+      <TileLayer
+        key={`osm-${escuro}`}
+        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution={ATRIB_OSM}
+        maxZoom={19}
+        className={escuro ? "osm-escuro" : "osm-claro"}
+      />
+    );
+  return (
+    <>
+      <TileLayer
+        key={`base-${tom}`}
+        url={`${ESRI}/World_${tom}_Gray_Base/MapServer/tile/{z}/{y}/{x}`}
+        attribution={ATRIB_ESRI}
+        maxNativeZoom={16}
+        maxZoom={19}
+        eventHandlers={{ tileerror: aoErrar }}
+      />
+      <TileLayer
+        key={`ref-${tom}`}
+        url={`${ESRI}/World_${tom}_Gray_Reference/MapServer/tile/{z}/{y}/{x}`}
+        maxNativeZoom={16}
+        maxZoom={19}
+      />
+    </>
+  );
 }
 
 export default function MapaRede({ pontos, produtos, escuro }: { pontos: Ponto[]; produtos: Produto[]; escuro: boolean }) {
   const chave = useMemo(() => pontos.map((x) => x.u.id).join(","), [pontos]);
-  const estilo = escuro ? "dark_all" : "light_all";
 
   return (
     <MapContainer center={CENTRO_REGIAO} zoom={10} zoomControl={false} className="h-full w-full" attributionControl>
-      <TileLayer
-        key={estilo}
-        url={`https://{s}.basemaps.cartocdn.com/${estilo}/{z}/{x}/{y}{r}.png`}
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        subdomains="abcd"
-        maxZoom={19}
-      />
+      <MapaBase escuro={escuro} />
       <Enquadrar pontos={pontos} chave={chave} />
       {pontos.map(({ u, p }) => {
         const meta = TIPO_META[p.tipo];
